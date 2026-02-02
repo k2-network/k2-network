@@ -1,0 +1,1 @@
+export { NegotiationPage } from "./Negotiation";

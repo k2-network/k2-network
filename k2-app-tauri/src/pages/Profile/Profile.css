@@ -1,0 +1,8 @@
+.profile-content {
+    padding: 24px 35px;
+    height: calc(100vh - 44px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}

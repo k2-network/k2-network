@@ -1,0 +1,1470 @@
+metadata:
+  name: Untitled
+  components: {}
+  componentSets: {}
+nodes:
+  - id: '62:54'
+    name: Frame 16
+    type: FRAME
+    layout: layout_Y4S38K
+    fills: fill_XWE37O
+    children:
+      - id: '62:55'
+        name: Frame 17
+        type: IMAGE-SVG
+        layout: layout_LPYW63
+        fills: fill_UFNNSJ
+      - id: '79:2'
+        name: Frame 18
+        type: FRAME
+        layout: layout_UQZN32
+        children:
+          - id: '62:73'
+            name: Discover Deals
+            type: TEXT
+            layout: layout_6PGZ7N
+            text: Discover Deals
+            textStyle: style_PDEDJK
+            fills: fill_87HL4L
+            opacity: 0.800000011920929
+          - id: '79:3'
+            name: Frame 19
+            type: FRAME
+            layout: layout_SZWSOL
+            fills: fill_MBW9TW
+            children:
+              - id: '79:5'
+                name: Marketplace
+                type: TEXT
+                layout: layout_9LNIR3
+                text: Marketplace
+                textStyle: style_PDEDJK
+                fills: fill_WEVV09
+              - id: '79:6'
+                name: 'NodeId: 7309f175ea...'
+                type: TEXT
+                layout: layout_IGSI0E
+                text: 'NodeId: 7309f175ea...'
+                textStyle: style_NQ56BD
+                fills: fill_87HL4L
+              - id: '79:12'
+                name: account_circle_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+                type: IMAGE-SVG
+                layout: layout_69G3NT
+                fills: fill_87HL4L
+              - id: '79:15'
+                name: Rectangle 1
+                type: RECTANGLE
+                layout: layout_NII2V8
+                fills: fill_4U8SFF
+                opacity: 0.23999999463558197
+              - id: '79:8'
+                name: k2-team
+                type: TEXT
+                layout: layout_95AB1P
+                text: k2-team
+                textStyle: style_NQ56BD
+                fills: fill_87HL4L
+          - id: '97:148'
+            name: Frame 39
+            type: FRAME
+            layout: layout_9NUT51
+            children:
+              - id: '62:75'
+                name: Digital Assets
+                type: TEXT
+                layout: layout_FX2SH3
+                text: Digital Assets
+                textStyle: style_U0HN6A
+                fills: fill_87HL4L
+                opacity: 0.800000011920929
+              - id: '97:147'
+                name: Frame 38
+                type: FRAME
+                layout: layout_M2VKQW
+                children:
+                  - id: '87:36'
+                    name: Frame 22
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '87:39'
+                        name: video_library_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+                        type: IMAGE-SVG
+                        layout: layout_U3Y3LC
+                        fills: fill_87HL4L
+                      - id: '97:97'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '87:43'
+                            name: Video
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: Video
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '87:45'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:98'
+                    name: Frame 31
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '89:9'
+                        name: palette_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+                        type: IMAGE-SVG
+                        layout: layout_U3Y3LC
+                        fills: fill_87HL4L
+                      - id: '97:101'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '97:102'
+                            name: Images
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: Images
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '97:103'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:105'
+                    name: Frame 32
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '89:26'
+                        name: >-
+                          music_note_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 (1)
+                          1
+                        type: IMAGE-SVG
+                        layout: layout_U3Y3LC
+                        fills: fill_87HL4L
+                      - id: '97:108'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '97:109'
+                            name: Audio
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: Audio
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '97:110'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:112'
+                    name: Frame 33
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '89:32'
+                        name: Vector
+                        type: IMAGE-SVG
+                        layout: layout_GQCPTD
+                        fills: fill_O6BBOY
+                      - id: '97:115'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '97:116'
+                            name: Token
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: Token
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '97:117'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:149'
+                    name: Frame 38
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '97:150'
+                        name: Vector
+                        type: IMAGE-SVG
+                        layout: layout_R4R2TS
+                        fills: fill_JUF9VF
+                      - id: '97:151'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '97:152'
+                            name: License | Key | Secret
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: License | Key | Secret
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '97:153'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:126'
+                    name: Frame 35
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '89:58'
+                        name: clarify_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+                        type: IMAGE-SVG
+                        layout: layout_BPRG8G
+                      - id: '97:129'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '97:130'
+                            name: Document
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: Document
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '97:131'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_8J6BQM
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:133'
+                    name: Frame 36
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '89:67'
+                        name: code_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+                        type: IMAGE-SVG
+                        layout: layout_P5WNTW
+                      - id: '97:136'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '97:137'
+                            name: Source Code
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: Source Code
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '97:138'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_8J6BQM
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:140'
+                    name: Frame 37
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '89:76'
+                        name: data_object_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+                        type: IMAGE-SVG
+                        layout: layout_P5WNTW
+                      - id: '97:143'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '97:144'
+                            name: Dataset
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: Dataset
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '97:145'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_8J6BQM
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+          - id: '97:271'
+            name: Frame 48
+            type: FRAME
+            layout: layout_Z8SB84
+            children:
+              - id: '62:74'
+                name: Goods
+                type: TEXT
+                layout: layout_6NLW2O
+                text: Goods
+                textStyle: style_U0HN6A
+                fills: fill_87HL4L
+                opacity: 0.800000011920929
+              - id: '97:270'
+                name: Frame 47
+                type: FRAME
+                layout: layout_PMZJPW
+                children:
+                  - id: '97:119'
+                    name: Frame 34
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '97:94'
+                        name: apparel_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+                        type: IMAGE-SVG
+                        layout: layout_7RH8OQ
+                        fills: fill_87HL4L
+                      - id: '97:122'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '97:123'
+                            name: Fashion
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: Fashion
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '97:124'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:155'
+                    name: Frame 40
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '97:164'
+                        name: laptop_mac_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+                        type: IMAGE-SVG
+                        layout: layout_UBP0HY
+                        fills: fill_87HL4L
+                      - id: '97:158'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '97:159'
+                            name: Electronics & Devices
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: Electronics & Devices
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '97:160'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:167'
+                    name: Frame 41
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '97:201'
+                        name: book_5_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+                        type: IMAGE-SVG
+                        layout: layout_UBP0HY
+                        fills: fill_87HL4L
+                      - id: '97:170'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '97:171'
+                            name: Books & Learning
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: Books & Learning
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '97:172'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_8J6BQM
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:179'
+                    name: Frame 42
+                    type: FRAME
+                    layout: layout_9BYMBP
+                    fills: fill_S7NEYC
+                    borderRadius: 16px
+                    children:
+                      - id: '97:195'
+                        name: travel_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+                        type: IMAGE-SVG
+                        layout: layout_UBP0HY
+                        fills: fill_87HL4L
+                      - id: '97:182'
+                        name: Frame 31
+                        type: FRAME
+                        layout: layout_J0SJOC
+                        children:
+                          - id: '97:183'
+                            name: Sports & Travel
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: Sports & Travel
+                            textStyle: style_U0HN6A
+                            fills: fill_87HL4L
+                            opacity: 0.8700000047683716
+                          - id: '97:184'
+                            name: 1k active traders
+                            type: TEXT
+                            layout: layout_8J6BQM
+                            text: 1k active traders
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+          - id: '89:31'
+            name: poker_chip_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+            type: FRAME
+            layout: layout_EN2E54
+            fills: fill_87HL4L
+          - id: '89:42'
+            name: vpn_key_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20 1
+            type: FRAME
+            layout: layout_X8H0VR
+            fills: fill_87HL4L
+          - id: '97:272'
+            name: Frame 49
+            type: FRAME
+            layout: layout_F7YALB
+            children:
+              - id: '62:76'
+                name: Freelance Job
+                type: TEXT
+                layout: layout_XXNTE4
+                text: Freelance Job
+                textStyle: style_U0HN6A
+                fills: fill_87HL4L
+                opacity: 0.800000011920929
+              - id: '97:269'
+                name: Frame 2
+                type: FRAME
+                layout: layout_PMZJPW
+                children:
+                  - id: '97:204'
+                    name: Frame 43
+                    type: FRAME
+                    layout: layout_98ROGA
+                    fills: fill_S7NEYC
+                    borderRadius: 8px
+                    children:
+                      - id: '97:206'
+                        name: Frame 32
+                        type: FRAME
+                        layout: layout_1I722I
+                        children:
+                          - id: '97:216'
+                            name: Frame 44
+                            type: FRAME
+                            layout: layout_PXZYJZ
+                            children:
+                              - id: '97:214'
+                                name: Vector
+                                type: IMAGE-SVG
+                                layout: layout_ALRLZ0
+                                fills: fill_RI5YS4
+                              - id: '97:207'
+                                name: Tech & IT
+                                type: TEXT
+                                layout: layout_QG4NM4
+                                text: Tech & IT
+                                textStyle: style_U0HN6A
+                                fills: fill_87HL4L
+                                opacity: 0.8700000047683716
+                          - id: '97:208'
+                            name: >-
+                              Web & Mobile Development Software / App
+                              Development Data Science / Analytics IT Support /
+                              Networking
+                            type: TEXT
+                            layout: layout_39KAN3
+                            text: |-
+
+                              Web & Mobile Development
+                              Software / App Development
+                              Data Science / Analytics
+                              IT Support / Networking
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                          - id: '97:275'
+                            name: 10 jobs
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: 10 jobs
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:217'
+                    name: Frame 44
+                    type: FRAME
+                    layout: layout_98ROGA
+                    fills: fill_S7NEYC
+                    borderRadius: 8px
+                    children:
+                      - id: '97:218'
+                        name: Frame 32
+                        type: FRAME
+                        layout: layout_F569IL
+                        children:
+                          - id: '97:227'
+                            name: >-
+                              design_services_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20
+                              1
+                            type: FRAME
+                            layout: layout_PYTW1O
+                            fills: fill_87HL4L
+                          - id: '97:219'
+                            name: Frame 44
+                            type: FRAME
+                            layout: layout_PXZYJZ
+                            children:
+                              - id: '97:228'
+                                name: Vector
+                                type: IMAGE-SVG
+                                layout: layout_KYTL30
+                                fills: fill_XZVE1Q
+                              - id: '97:221'
+                                name: Design & Creative
+                                type: TEXT
+                                layout: layout_QG4NM4
+                                text: Design & Creative
+                                textStyle: style_U0HN6A
+                                fills: fill_87HL4L
+                                opacity: 0.8700000047683716
+                          - id: '97:222'
+                            name: >-
+                              Graphic Design UI/UX Design Illustration /
+                              Animation Video & Photo Editing
+                            type: TEXT
+                            layout: layout_39KAN3
+                            text: |-
+
+                              Graphic Design
+                              UI/UX Design
+                              Illustration / Animation
+                              Video & Photo Editing
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                          - id: '97:277'
+                            name: 10 jobs
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: 10 jobs
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:230'
+                    name: Frame 45
+                    type: FRAME
+                    layout: layout_98ROGA
+                    fills: fill_S7NEYC
+                    borderRadius: 8px
+                    children:
+                      - id: '97:231'
+                        name: Frame 32
+                        type: FRAME
+                        layout: layout_F569IL
+                        children:
+                          - id: '97:232'
+                            name: >-
+                              design_services_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20
+                              1
+                            type: FRAME
+                            layout: layout_PYTW1O
+                            fills: fill_87HL4L
+                          - id: '97:243'
+                            name: Frame 46
+                            type: FRAME
+                            layout: layout_WV6912
+                            children:
+                              - id: '97:240'
+                                name: >-
+                                  translate_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20
+                                  1
+                                type: IMAGE-SVG
+                                layout: layout_PYTW1O
+                                fills: fill_87HL4L
+                              - id: '97:258'
+                                name: Frame 44
+                                type: FRAME
+                                layout: layout_PXZYJZ
+                                children:
+                                  - id: '97:260'
+                                    name: Writing & Translation
+                                    type: TEXT
+                                    layout: layout_QG4NM4
+                                    text: Writing & Translation
+                                    textStyle: style_U0HN6A
+                                    fills: fill_87HL4L
+                                    opacity: 0.8700000047683716
+                          - id: '97:236'
+                            name: >-
+                              Content Writing / Copywriting Blogging / Articles
+                              Translation / Localization Technical Writing
+                            type: TEXT
+                            layout: layout_39KAN3
+                            text: |-
+
+                              Content Writing / Copywriting
+                              Blogging / Articles
+                              Translation / Localization
+                              Technical Writing
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                          - id: '97:279'
+                            name: 10 jobs
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: 10 jobs
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                  - id: '97:245'
+                    name: Frame 46
+                    type: FRAME
+                    layout: layout_98ROGA
+                    fills: fill_S7NEYC
+                    borderRadius: 8px
+                    children:
+                      - id: '97:246'
+                        name: Frame 32
+                        type: FRAME
+                        layout: layout_F569IL
+                        children:
+                          - id: '97:247'
+                            name: >-
+                              design_services_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20
+                              1
+                            type: FRAME
+                            layout: layout_PYTW1O
+                            fills: fill_87HL4L
+                          - id: '97:248'
+                            name: Frame 46
+                            type: FRAME
+                            layout: layout_WV6912
+                            children:
+                              - id: '97:266'
+                                name: >-
+                                  ads_click_16dp_E3E3E3_FILL0_wght400_GRAD0_opsz20
+                                  1
+                                type: IMAGE-SVG
+                                layout: layout_PYTW1O
+                                fills: fill_87HL4L
+                              - id: '97:255'
+                                name: Marketing & Sales
+                                type: TEXT
+                                layout: layout_QG4NM4
+                                text: Marketing & Sales
+                                textStyle: style_U0HN6A
+                                fills: fill_87HL4L
+                                opacity: 0.8700000047683716
+                          - id: '97:252'
+                            name: >-
+                              Digital Marketing Social Media Management SEO /
+                              SEM Sales & Lead Generation
+                            type: TEXT
+                            layout: layout_39KAN3
+                            text: |-
+
+                              Digital Marketing
+                              Social Media Management
+                              SEO / SEM
+                              Sales & Lead Generation
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+                          - id: '97:281'
+                            name: 10 jobs
+                            type: TEXT
+                            layout: layout_QG4NM4
+                            text: 10 jobs
+                            textStyle: style_U0HN6A
+                            fills: fill_V90D3E
+                            opacity: 0.8700000047683716
+globalVars:
+  styles:
+    layout_Y4S38K:
+      mode: none
+      sizing: {}
+      dimensions:
+        width: 1526
+        height: 980
+    fill_XWE37O:
+      - '#1A1A1E'
+    layout_LPYW63:
+      mode: column
+      alignItems: center
+      gap: 20px
+      padding: 21px 5px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      locationRelativeToParent:
+        x: 0
+        'y': 0
+      dimensions:
+        width: 64
+        height: 980
+    fill_UFNNSJ:
+      - '#121214'
+    layout_YG3JF4:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 50
+        height: 50
+    fill_87HL4L:
+      - '#FFFFFF'
+    layout_0MWB7O:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0.09
+        'y': 0.09
+      dimensions:
+        width: 46
+        height: 46
+    layout_2QTM3E:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        'y': 0
+      dimensions:
+        width: 46
+        height: 46
+    layout_1ABBKZ:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 9.7
+        'y': 23.76
+      dimensions:
+        width: 29.04
+        height: 4.93
+    fill_0M8E5R:
+      - type: GRADIENT_LINEAR
+        gradient: >-
+          linear-gradient(90deg, rgba(65, 65, 65, 1) 0%, rgba(66, 66, 66, 1) 1%,
+          rgba(68, 68, 68, 1) 1%, rgba(70, 70, 70, 1) 2%, rgba(72, 72, 72, 1)
+          3%, rgba(74, 74, 74, 1) 4%, rgba(76, 76, 76, 1) 4%, rgba(77, 77, 77,
+          1) 5%, rgba(79, 79, 79, 1) 6%, rgba(81, 81, 81, 1) 7%, rgba(83, 83,
+          83, 1) 7%, rgba(85, 85, 85, 1) 8%, rgba(86, 86, 86, 1) 9%, rgba(88,
+          88, 88, 1) 9%, rgba(90, 90, 90, 1) 10%, rgba(91, 91, 91, 1) 11%,
+          rgba(93, 93, 93, 1) 12%, rgba(95, 95, 95, 1) 12%, rgba(97, 97, 97, 1)
+          13%, rgba(98, 98, 98, 1) 14%, rgba(100, 100, 100, 1) 14%, rgba(102,
+          102, 102, 1) 15%, rgba(103, 103, 103, 1) 16%, rgba(105, 105, 105, 1)
+          17%, rgba(106, 106, 106, 1) 17%, rgba(108, 108, 108, 1) 18%, rgba(110,
+          110, 110, 1) 19%, rgba(111, 111, 111, 1) 20%, rgba(113, 113, 113, 1)
+          20%, rgba(114, 114, 114, 1) 21%, rgba(116, 116, 116, 1) 22%, rgba(117,
+          117, 117, 1) 22%, rgba(119, 119, 119, 1) 23%, rgba(120, 120, 120, 1)
+          24%, rgba(122, 122, 122, 1) 25%, rgba(123, 123, 123, 1) 25%, rgba(125,
+          125, 125, 1) 26%, rgba(126, 126, 126, 1) 27%, rgba(128, 128, 128, 1)
+          28%, rgba(129, 129, 129, 1) 28%, rgba(130, 130, 130, 1) 29%, rgba(132,
+          132, 132, 1) 30%, rgba(133, 133, 133, 1) 30%, rgba(134, 134, 134, 1)
+          31%, rgba(136, 136, 136, 1) 32%, rgba(137, 137, 137, 1) 33%, rgba(139,
+          139, 139, 1) 33%, rgba(140, 140, 140, 1) 34%, rgba(141, 141, 141, 1)
+          35%, rgba(142, 142, 142, 1) 36%, rgba(144, 144, 144, 1) 36%, rgba(145,
+          145, 145, 1) 37%, rgba(146, 146, 146, 1) 38%, rgba(147, 147, 147, 1)
+          38%, rgba(149, 149, 149, 1) 39%, rgba(150, 150, 150, 1) 40%, rgba(151,
+          151, 151, 1) 41%, rgba(152, 152, 152, 1) 41%, rgba(153, 153, 153, 1)
+          42%, rgba(155, 155, 155, 1) 43%, rgba(156, 156, 156, 1) 43%, rgba(157,
+          157, 157, 1) 44%, rgba(158, 158, 158, 1) 45%, rgba(159, 159, 159, 1)
+          46%, rgba(160, 160, 160, 1) 46%, rgba(161, 161, 161, 1) 47%, rgba(162,
+          162, 162, 1) 48%, rgba(164, 164, 164, 1) 49%, rgba(165, 165, 165, 1)
+          49%, rgba(166, 166, 166, 1) 50%, rgba(167, 167, 167, 1) 51%, rgba(168,
+          168, 168, 1) 51%, rgba(169, 169, 169, 1) 52%, rgba(170, 170, 170, 1)
+          53%, rgba(171, 171, 171, 1) 54%, rgba(172, 172, 172, 1) 54%, rgba(172,
+          172, 172, 1) 55%, rgba(173, 173, 173, 1) 56%, rgba(174, 174, 174, 1)
+          57%, rgba(175, 175, 175, 1) 57%, rgba(176, 176, 176, 1) 58%, rgba(177,
+          177, 177, 1) 59%, rgba(178, 178, 178, 1) 59%, rgba(179, 179, 179, 1)
+          60%, rgba(180, 180, 180, 1) 61%, rgba(180, 180, 180, 1) 62%, rgba(181,
+          181, 181, 1) 62%, rgba(182, 182, 182, 1) 63%, rgba(183, 183, 183, 1)
+          64%, rgba(184, 184, 184, 1) 64%, rgba(184, 184, 184, 1) 65%, rgba(185,
+          185, 185, 1) 66%, rgba(186, 186, 186, 1) 67%, rgba(186, 186, 186, 1)
+          67%, rgba(187, 187, 187, 1) 68%, rgba(188, 188, 188, 1) 69%, rgba(189,
+          189, 189, 1) 70%, rgba(189, 189, 189, 1) 70%, rgba(190, 190, 190, 1)
+          71%, rgba(190, 190, 190, 1) 72%, rgba(191, 191, 191, 1) 72%, rgba(192,
+          192, 192, 1) 73%, rgba(192, 192, 192, 1) 74%, rgba(193, 193, 193, 1)
+          75%, rgba(193, 193, 193, 1) 75%, rgba(194, 194, 194, 1) 76%, rgba(195,
+          195, 195, 1) 77%, rgba(195, 195, 195, 1) 78%, rgba(196, 196, 196, 1)
+          78%, rgba(196, 196, 196, 1) 79%, rgba(197, 197, 197, 1) 80%, rgba(197,
+          197, 197, 1) 80%, rgba(197, 197, 197, 1) 81%, rgba(198, 198, 198, 1)
+          82%, rgba(198, 198, 198, 1) 83%, rgba(199, 199, 199, 1) 83%, rgba(199,
+          199, 199, 1) 84%, rgba(199, 199, 199, 1) 85%, rgba(200, 200, 200, 1)
+          86%, rgba(200, 200, 200, 1) 86%, rgba(200, 200, 200, 1) 87%, rgba(201,
+          201, 201, 1) 88%, rgba(201, 201, 201, 1) 88%, rgba(201, 201, 201, 1)
+          89%, rgba(202, 202, 202, 1) 90%, rgba(202, 202, 202, 1) 91%, rgba(202,
+          202, 202, 1) 91%, rgba(202, 202, 202, 1) 92%, rgba(202, 202, 202, 1)
+          93%, rgba(203, 203, 203, 1) 93%, rgba(203, 203, 203, 1) 94%, rgba(203,
+          203, 203, 1) 95%, rgba(203, 203, 203, 1) 96%, rgba(203, 203, 203, 1)
+          96%, rgba(203, 203, 203, 1) 97%, rgba(203, 203, 203, 1) 98%, rgba(203,
+          203, 203, 1) 99%, rgba(203, 203, 203, 1) 99%, rgba(204, 204, 204, 1)
+          100%)
+    layout_3UWYV5:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 6.91
+        'y': 7.14
+      dimensions:
+        width: 35.01
+        height: 28.78
+    layout_67KOGO:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 12.77
+        'y': 5.29
+      dimensions:
+        width: 8.71
+        height: 5.9
+    layout_JC6OD6:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 20.09
+        'y': 21.58
+      dimensions:
+        width: 2.88
+        height: 2.83
+    fill_BLZIMV:
+      - '#000000'
+    layout_A0LTCA:
+      mode: column
+      justifyContent: space-between
+      gap: 10px
+      padding: 17px 12px
+      sizing:
+        horizontal: hug
+        vertical: fixed
+      dimensions:
+        height: 271
+    layout_COMF1H:
+      mode: column
+      justifyContent: center
+      alignItems: center
+      gap: 10px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 28
+        height: 28
+    layout_78SWXB:
+      mode: column
+      justifyContent: center
+      alignItems: center
+      gap: 10px
+      padding: 3px
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 36
+        height: 36
+    fill_ZJ6D40:
+      - '#1A1A1A'
+    layout_KYTL30:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 16
+        height: 16
+    fill_ND5XKX:
+      - '#387EBB'
+    layout_PYTW1O:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 20
+        height: 20
+    layout_J18ROT:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 2.5
+        'y': 2.5
+      dimensions:
+        width: 15
+        height: 15
+    fill_CAHWZR:
+      - '#E3E3E3'
+    layout_812QKJ:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 1.67
+        'y': 1.67
+      dimensions:
+        width: 16.67
+        height: 16.67
+    layout_6SA76N:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 2.98
+        'y': 1.67
+      dimensions:
+        width: 14.02
+        height: 16.67
+    layout_UQZN32:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 64
+        'y': 0
+      dimensions:
+        width: 1462
+        height: 980
+    layout_6PGZ7N:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 35
+        'y': 114
+      dimensions:
+        width: 112
+        height: 19
+    style_PDEDJK:
+      fontFamily: Raleway
+      fontWeight: 600
+      fontSize: 16
+      lineHeight: 1.1740000247955322em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_SZWSOL:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        'y': 0
+      dimensions:
+        width: 1462
+        height: 44
+    fill_MBW9TW:
+      - '#222226'
+    layout_9LNIR3:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 683
+        'y': 12
+      dimensions:
+        width: 95
+        height: 19
+    fill_WEVV09:
+      - rgba(255, 255, 255, 0.7)
+    layout_IGSI0E:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 1277
+        'y': 12
+      dimensions:
+        width: 157
+        height: 19
+    style_NQ56BD:
+      fontFamily: Raleway
+      fontWeight: 500
+      fontSize: 16
+      lineHeight: 1.1740000247955322em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_69G3NT:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 1146
+        'y': 12
+      dimensions:
+        width: 20
+        height: 20
+    layout_SO476Y:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 2
+        'y': 2
+      dimensions:
+        width: 16
+        height: 16
+    layout_NII2V8:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 1257
+        'y': 9
+      dimensions:
+        width: 2
+        height: 25
+    fill_4U8SFF:
+      - '#D9D9D9'
+    layout_95AB1P:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 1173
+        'y': 12
+      dimensions:
+        width: 63
+        height: 19
+    layout_9NUT51:
+      mode: column
+      gap: 32px
+      sizing:
+        horizontal: fixed
+        vertical: hug
+      locationRelativeToParent:
+        x: 35
+        'y': 183
+      dimensions:
+        width: 1200
+    layout_FX2SH3:
+      mode: none
+      sizing:
+        horizontal: fill
+        vertical: hug
+    style_U0HN6A:
+      fontFamily: Raleway
+      fontWeight: 600
+      fontSize: 14
+      lineHeight: 1.1740000588553292em
+      textAlignHorizontal: LEFT
+      textAlignVertical: TOP
+    layout_M2VKQW:
+      mode: row
+      alignSelf: stretch
+      wrap: true
+      gap: 24px
+      sizing:
+        horizontal: fill
+        vertical: fixed
+    layout_9BYMBP:
+      mode: row
+      alignItems: center
+      gap: 12px
+      padding: 16px 12px 16px 24px
+      sizing:
+        horizontal: fixed
+        vertical: hug
+      dimensions:
+        width: 278
+    fill_S7NEYC:
+      - '#1F1F24'
+    layout_U3Y3LC:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 32
+        height: 32
+    layout_W30584:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3.2
+        'y': 3.2
+      dimensions:
+        width: 25.6
+        height: 25.6
+    fill_4EVHWV:
+      - '#FF4242'
+    layout_J0SJOC:
+      mode: column
+      justifyContent: center
+      sizing:
+        horizontal: fixed
+        vertical: hug
+      dimensions:
+        width: 120
+    layout_QG4NM4:
+      mode: none
+      sizing:
+        horizontal: hug
+        vertical: hug
+    fill_V90D3E:
+      - '#858585'
+    fill_B7KT19:
+      - '#828D45'
+    layout_K7BQYT:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 8.8
+        'y': 4.8
+      dimensions:
+        width: 14.4
+        height: 22.4
+    fill_7MGUU6:
+      - '#DF9F03'
+    layout_GQCPTD:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 29
+        height: 29
+    fill_O6BBOY:
+      - '#7B49FF'
+    layout_R4R2TS:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 28.8
+        height: 16
+    fill_JUF9VF:
+      - '#CC872E'
+    layout_BPRG8G:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 25
+        height: 25
+    layout_YZ9MJX:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 2.5
+        'y': 3.75
+      dimensions:
+        width: 20
+        height: 17.5
+    layout_8J6BQM:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: hug
+      dimensions:
+        width: 109
+    layout_P5WNTW:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 27
+        height: 27
+    layout_SXFBQA:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 2.7
+        'y': 6.75
+      dimensions:
+        width: 21.6
+        height: 13.5
+    fill_I7SFZ8:
+      - '#73ACB3'
+    layout_1E8986:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 2.7
+        'y': 5.4
+      dimensions:
+        width: 21.6
+        height: 16.2
+    fill_OURN1P:
+      - '#E46F9F'
+    layout_Z8SB84:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 35
+        'y': 462
+      dimensions:
+        width: 1184
+        height: 103
+    layout_6NLW2O:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        'y': 0
+      dimensions:
+        width: 43
+        height: 16
+    layout_PMZJPW:
+      mode: row
+      alignItems: center
+      gap: 24px
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 0
+        'y': 48
+    layout_7RH8OQ:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 28
+        height: 28
+    layout_5VWLNZ:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 2.81
+        'y': 4.2
+      dimensions:
+        width: 22.38
+        height: 19.6
+    fill_KGCYV6:
+      - '#27D17C'
+    layout_UBP0HY:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 24
+        height: 24
+    layout_3WELFX:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        'y': 3.6
+      dimensions:
+        width: 24
+        height: 16.8
+    fill_W6MM5K:
+      - '#5CC0F6'
+    layout_D0WG3I:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 4.8
+        'y': 1.28
+      dimensions:
+        width: 14.4
+        height: 20.33
+    fill_ZRRID7:
+      - '#C38C45'
+    layout_0UKBQ6:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 3.25
+        'y': 3.25
+      dimensions:
+        width: 17.5
+        height: 17.5
+    fill_DIVOEZ:
+      - '#7CD9D8'
+    layout_EN2E54:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 869
+        'y': 391
+      dimensions:
+        width: 20
+        height: 20
+    layout_X8H0VR:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 721
+        'y': 462
+      dimensions:
+        width: 32
+        height: 32
+    layout_F7YALB:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 35
+        'y': 659
+      dimensions:
+        width: 1184
+        height: 232
+    layout_XXNTE4:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 0
+        'y': 0
+      dimensions:
+        width: 163
+        height: 16
+    layout_98ROGA:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 278
+        height: 226
+    layout_1I722I:
+      mode: column
+      justifyContent: center
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 20
+        'y': 34
+    layout_PXZYJZ:
+      mode: row
+      gap: 8px
+      sizing:
+        horizontal: hug
+        vertical: hug
+    layout_ALRLZ0:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 18
+        height: 18
+    fill_RI5YS4:
+      - '#F15CDD'
+    layout_39KAN3:
+      mode: none
+      sizing:
+        horizontal: fixed
+        vertical: fixed
+      dimensions:
+        width: 238
+        height: 123
+    layout_F569IL:
+      mode: column
+      justifyContent: center
+      sizing:
+        horizontal: hug
+        vertical: hug
+      locationRelativeToParent:
+        x: 20
+        'y': 17
+    fill_XZVE1Q:
+      - '#47E069'
+    layout_WV6912:
+      mode: row
+      alignItems: center
+      gap: 8px
+      sizing:
+        horizontal: hug
+        vertical: hug
+    layout_ZG65MP:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 1
+        'y': 2
+      dimensions:
+        width: 18
+        height: 16
+    layout_C1SZ1Z:
+      mode: none
+      sizing: {}
+      locationRelativeToParent:
+        x: 2
+        'y': 2
+      dimensions:
+        width: 16.5
+        height: 16.5
+    fill_F5XKT3:
+      - '#E7F95D'
