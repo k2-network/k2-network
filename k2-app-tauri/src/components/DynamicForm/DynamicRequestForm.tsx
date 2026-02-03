@@ -4,7 +4,6 @@
  * Supports streaming/loading states for AI-generated content
  */
 import React, { useState, useEffect } from 'react';
-import { IoSparkles, IoSearch, IoBriefcase, IoCart, IoSwapHorizontal, IoLocationOutline } from 'react-icons/io5';
 import { SkeletonField, SkeletonForm } from './SkeletonField';
 import type {
     DynamicFormFields,
@@ -182,19 +181,19 @@ export const DynamicRequestForm: React.FC<DynamicRequestFormProps> = ({
                     className={`action-btn ${formData.action === 'buy' ? 'active buy' : ''}`}
                     onClick={() => handleFieldChange('action', 'buy')}
                 >
-                    <IoCart /> Mua
+                    Mua
                 </button>
                 <button
                     className={`action-btn ${formData.action === 'sell' ? 'active sell' : ''}`}
                     onClick={() => handleFieldChange('action', 'sell')}
                 >
-                    <IoBriefcase /> Bán
+                    Bán
                 </button>
                 <button
                     className={`action-btn ${formData.action === 'exchange' ? 'active exchange' : ''}`}
                     onClick={() => handleFieldChange('action', 'exchange')}
                 >
-                    <IoSwapHorizontal /> Trao đổi
+                    Trao đổi
                 </button>
             </div>
 
@@ -206,11 +205,6 @@ export const DynamicRequestForm: React.FC<DynamicRequestFormProps> = ({
                     <div className={`form-field ${isFieldLoading('title') ? 'loading' : ''}`}>
                         <label className="form-label">
                             Tiêu đề
-                            {initialData?.title && (
-                                <span className="ai-generated-badge">
-                                    <IoSparkles /> AI
-                                </span>
-                            )}
                         </label>
                         {isFieldLoading('title') ? (
                             <SkeletonField type="input" />
@@ -230,11 +224,6 @@ export const DynamicRequestForm: React.FC<DynamicRequestFormProps> = ({
                     <div className={`form-field ${isFieldLoading('description') ? 'loading' : ''}`}>
                         <label className="form-label">
                             Mô tả chi tiết
-                            {initialData?.description && (
-                                <span className="ai-generated-badge">
-                                    <IoSparkles /> AI
-                                </span>
-                            )}
                         </label>
                         {isFieldLoading('description') ? (
                             <SkeletonField type="textarea" />
@@ -472,7 +461,6 @@ export const DynamicRequestForm: React.FC<DynamicRequestFormProps> = ({
                 <div className="form-row">
                     <div className="form-field">
                         <label className="form-label">
-                            <IoLocationOutline style={{ marginRight: 4 }} />
                             Khu vực
                         </label>
                         <input
@@ -498,7 +486,7 @@ export const DynamicRequestForm: React.FC<DynamicRequestFormProps> = ({
                     onClick={handleSubmit}
                     disabled={isStreaming || !formData.title}
                 >
-                    <IoSearch /> Bắt đầu tìm kiếm
+                    Bắt đầu tìm kiếm
                 </button>
             </div>
         </div>

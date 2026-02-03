@@ -104,53 +104,43 @@
 
 /* Form Container */
 .dynamic-form-container {
+    margin-top: 64px;
     margin-left: auto;
     margin-right: auto;
     width: 600px;
-    padding: 20px;
-    background: #1e1e1e;
+    padding: 24px;
+    background: #161b22;
     border-radius: 12px;
-    /* margin: 16px; */
-    border: 1px solid #3c3c3c;
+    border: 1px solid #30363d;
 }
 
 .form-header {
     display: flex;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 20px;
-    padding-bottom: 16px;
-    border-bottom: 1px solid #3c3c3c;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 24px;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 .form-icon {
-    width: 48px;
-    height: 48px;
-    border-radius: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-}
-
-.form-icon.goods {
-    background: linear-gradient(135deg, #10b981, #059669);
-}
-
-.form-icon.digital {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-}
-
-.form-icon.freelance {
-    background: linear-gradient(135deg, #f59e0b, #d97706);
+    display: none;
 }
 
 .form-header-text h3 {
     margin: 0;
     color: #ffffff;
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 600;
 }
+
+.form-header-text p {
+    margin: 4px 0 0;
+    color: #6e7681;
+    font-size: 14px;
+    font-weight: 400;
+}
+
 
 .form-header-text p {
     margin: 4px 0 0;
@@ -161,10 +151,11 @@
 /* Action Toggle (Buy/Sell/Exchange) */
 .action-toggle {
     display: flex;
-    background: #2d2d30;
+    background: #0d1117;
     border-radius: 8px;
     padding: 4px;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    border: 1px solid #30363d;
 }
 
 .action-btn {
@@ -172,7 +163,7 @@
     padding: 10px 16px;
     border: none;
     background: transparent;
-    color: #9d9d9d;
+    color: #8b949e;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
@@ -181,21 +172,13 @@
 }
 
 .action-btn:hover {
-    color: #cccccc;
+    color: #f0f6fc;
 }
 
-.action-btn.active.buy {
-    background: linear-gradient(135deg, #10b981, #059669);
-    color: #ffffff;
-}
-
-.action-btn.active.sell {
-    background: linear-gradient(135deg, #ef4444, #dc2626);
-    color: #ffffff;
-}
-
+.action-btn.active.buy,
+.action-btn.active.sell,
 .action-btn.active.exchange {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    background: #469AEC;
     color: #ffffff;
 }
 
@@ -209,19 +192,11 @@
     align-items: center;
     gap: 8px;
     margin-bottom: 12px;
-    color: #cccccc;
-    font-size: 13px;
+    color: #d3d3d3;
+    font-size: 12px;
     font-weight: 500;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-}
-
-.form-section-title::before {
-    content: '';
-    width: 3px;
-    height: 14px;
-    background: linear-gradient(180deg, #6366f1, #8b5cf6);
-    border-radius: 2px;
 }
 
 .form-row {
@@ -248,19 +223,19 @@
 
 .form-label {
     display: block;
-    color: #9d9d9d;
-    font-size: 12px;
-    margin-bottom: 6px;
+    color: #b1b1b1;
+    font-size: 13px;
+    margin-bottom: 8px;
     font-weight: 500;
 }
 
 .form-input {
     width: 100%;
-    padding: 10px 14px;
-    background: #2d2d30;
-    border: 1px solid #3c3c3c;
+    padding: 12px 14px;
+    background: #0d1117;
+    border: 1px solid #30363d;
     border-radius: 8px;
-    color: #ffffff;
+    color: #f0f6fc;
     font-size: 14px;
     transition: all 0.2s ease;
     box-sizing: border-box;
@@ -268,15 +243,16 @@
 
 .form-input:focus {
     outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    border-color: #58a6ff;
+    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
 }
 
 .form-input::placeholder {
-    color: #6d6d6d;
+    color: #484f58;
 }
 
 .form-textarea {
+    /* font-family: 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; */
     min-height: 80px;
     resize: vertical;
 }
@@ -291,10 +267,10 @@
 
 /* Price Range Slider */
 .price-range-container {
-    background: #2d2d30;
+    background: #0d1117;
     border-radius: 8px;
     padding: 16px;
-    border: 1px solid #3c3c3c;
+    border: 1px solid #30363d;
 }
 
 .price-range-header {
@@ -304,7 +280,7 @@
 }
 
 .price-value {
-    color: #10b981;
+    color: #58a6ff;
     font-size: 16px;
     font-weight: 600;
 }
@@ -322,10 +298,10 @@
     appearance: none;
     width: 18px;
     height: 18px;
-    background: linear-gradient(135deg, #10b981, #059669);
+    background: linear-gradient(135deg, #2d8cf0, #1a73e8);
     border-radius: 50%;
     cursor: pointer;
-    border: 2px solid #1e1e1e;
+    border: 2px solid #161b22;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
@@ -339,17 +315,17 @@
     flex: 1;
     display: flex;
     align-items: center;
-    background: #1e1e1e;
+    background: #161b22;
     border-radius: 6px;
     padding: 8px 12px;
-    border: 1px solid #3c3c3c;
+    border: 1px solid #30363d;
 }
 
 .price-input-group input {
     flex: 1;
     background: transparent;
     border: none;
-    color: #ffffff;
+    color: #f0f6fc;
     font-size: 14px;
     width: 60px;
 }
@@ -359,7 +335,7 @@
 }
 
 .price-input-group span {
-    color: #9d9d9d;
+    color: #8b949e;
     font-size: 12px;
     margin-left: 8px;
 }
@@ -375,34 +351,34 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 6px 12px;
-    background: #2d2d30;
-    border: 1px solid #3c3c3c;
-    border-radius: 20px;
-    color: #cccccc;
+    padding: 8px 14px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #8b949e;
     font-size: 13px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .tag:hover {
-    border-color: #6366f1;
-    color: #ffffff;
+    border-color: #58a6ff;
+    color: #f0f6fc;
 }
 
 .tag.selected {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    border-color: transparent;
-    color: #ffffff;
+    background: #21262d;
+    border-color: #58a6ff;
+    color: #58a6ff;
 }
 
 .tag-prefix {
-    color: #6366f1;
+    color: #58a6ff;
     font-weight: 500;
 }
 
 .tag.selected .tag-prefix {
-    color: rgba(255, 255, 255, 0.8);
+    color: #58a6ff;
 }
 
 /* Condition Selector */
@@ -414,10 +390,10 @@
 .condition-option {
     flex: 1;
     padding: 10px;
-    background: #2d2d30;
-    border: 1px solid #3c3c3c;
-    border-radius: 8px;
-    color: #9d9d9d;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #8b949e;
     font-size: 13px;
     text-align: center;
     cursor: pointer;
@@ -425,14 +401,14 @@
 }
 
 .condition-option:hover {
-    border-color: #6366f1;
-    color: #cccccc;
+    border-color: #58a6ff;
+    color: #f0f6fc;
 }
 
 .condition-option.selected {
-    background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(139, 92, 246, 0.2));
-    border-color: #6366f1;
-    color: #ffffff;
+    background: #21262d;
+    border-color: #58a6ff;
+    color: #58a6ff;
 }
 
 /* Topic Specific Styles */
@@ -471,22 +447,24 @@
 .form-actions {
     display: flex;
     gap: 12px;
-    margin-top: 24px;
-    padding-top: 20px;
-    border-top: 1px solid #3c3c3c;
+    margin-top: 28px;
+    padding-top: 24px;
+    border-top: 1px solid #30363d;
 }
 
 .btn-submit {
     flex: 1;
     padding: 14px 24px;
-    background: linear-gradient(135deg, #10b981, #059669);
-    border: none;
+    background: #469AEC;
+    /* border: 1px solid rgba(130, 200, 255, 0.5); */
+    /* Highlighted top border */
     border-radius: 8px;
+    /* Smoother corners */
     color: #ffffff;
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.25s ease;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -494,30 +472,30 @@
 }
 
 .btn-submit:hover {
+    background: rgba(0, 110, 255, 0.8);
+    border-color: rgba(180, 220, 255, 0.8);
+    box-shadow:
+        0 0 35px rgba(0, 100, 255, 0.6),
+        inset 0 0 20px rgba(255, 255, 255, 0.2);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-}
-
-.btn-submit:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
 }
 
 .btn-cancel {
     padding: 14px 24px;
     background: transparent;
-    border: 1px solid #3c3c3c;
+    border: 1px solid #30363d;
     border-radius: 8px;
-    color: #9d9d9d;
+    color: #8b949e;
     font-size: 14px;
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .btn-cancel:hover {
-    border-color: #6d6d6d;
-    color: #cccccc;
+    border-color: #8b949e;
+    color: #f0f6fc;
 }
 
 /* Streaming indicator */
