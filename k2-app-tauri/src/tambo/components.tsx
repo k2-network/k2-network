@@ -3,9 +3,9 @@
  * 
  * Register React components that Tambo can dynamically render
  */
+import React from "react";
 import { z } from "zod";
 import type { TamboComponent } from "@tambo-ai/react";
-import { DynamicRequestForm } from "../components/DynamicForm";
 
 // ============================================
 // SCHEMA LỎng - dùng z.string() thay vì z.enum() 
@@ -61,18 +61,19 @@ const normalizeCondition = (condition?: string): "new" | "used" | "like-new" | "
 };
 
 // Wrapper component với normalization
+// Thay vì render form trực tiếp, dispatch event để Marketplace hiển thị form
 const DynamicFormWrapper: React.FC<z.infer<typeof dynamicFormPropsSchema>> = (props) => {
     console.log('📥 [DynamicFormWrapper] Raw props from AI:', props);
-    
+
     // Normalize values
     const normalizedTopic = normalizeTopic(props.topic);
     const normalizedAction = normalizeAction(props.action);
     const normalizedCondition = normalizeCondition(props.condition);
-    
-    console.log('✅ [DynamicFormWrapper] Normalized:', { 
-        topic: normalizedTopic, 
+
+    console.log('✅ [DynamicFormWrapper] Normalized:', {
+        topic: normalizedTopic,
         action: normalizedAction,
-        condition: normalizedCondition 
+        condition: normalizedCondition
     });
 
     // Build selection based on topic
@@ -97,18 +98,25 @@ const DynamicFormWrapper: React.FC<z.infer<typeof dynamicFormPropsSchema>> = (pr
         ...(props.brand ? { brand: props.brand } : {})
     };
 
-    const handleSubmit = (data: any) => {
-        console.log("📤 [DynamicForm] Submitted:", data);
-        window.dispatchEvent(new CustomEvent('k2:formSubmitted', { detail: data }));
-    };
+    // Dispatch event để Marketplace hiển thị form trong tab Create Request
+    React.useEffect(() => {
+        console.log('📤 [DynamicFormWrapper] Dispatching form to Marketplace tab...');
+        window.dispatchEvent(new CustomEvent('k2:showDynamicForm', {
+            detail: { data: formData, streaming: false }
+        }));
+        
+        // Dispatch notification event để hiển thị outside của message
+        const actionText = normalizedAction === 'buy' ? 'mua' : normalizedAction === 'sell' ? 'bán' : 'trao đổi';
+        window.dispatchEvent(new CustomEvent('k2:showFormNotification', {
+            detail: { 
+                actionText,
+                title: props.title || normalizedTopic
+            }
+        }));
+    }, [formData, normalizedAction, props.title, normalizedTopic]);
 
-    return (
-        <DynamicRequestForm
-            initialData={formData}
-            onSubmit={handleSubmit}
-            isStreaming={false}
-        />
-    );
+    // Không render gì trong chat, chỉ dispatch events
+    return null;
 };
 
 // Register DynamicRequestForm as TamboComponent

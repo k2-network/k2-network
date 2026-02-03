@@ -90,7 +90,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    background: #469AEC;
     border-radius: 2px 2px 0 0;
 }
 
@@ -104,10 +104,13 @@
 
 /* Form Container */
 .dynamic-form-container {
+    margin-left: auto;
+    margin-right: auto;
+    width: 600px;
     padding: 20px;
     background: #1e1e1e;
     border-radius: 12px;
-    margin: 16px;
+    /* margin: 16px; */
     border: 1px solid #3c3c3c;
 }
 
