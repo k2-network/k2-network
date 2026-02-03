@@ -4,6 +4,7 @@
  * Supports streaming/loading states for AI-generated content
  */
 import React, { useState, useEffect } from 'react';
+import { IoSearch } from 'react-icons/io5';
 import { SkeletonField, SkeletonForm } from './SkeletonField';
 import type {
     DynamicFormFields,
@@ -486,7 +487,7 @@ export const DynamicRequestForm: React.FC<DynamicRequestFormProps> = ({
                     onClick={handleSubmit}
                     disabled={isStreaming || !formData.title}
                 >
-                    Bắt đầu tìm kiếm
+                    <IoSearch /> Bắt đầu tìm kiếm
                 </button>
             </div>
         </div>

@@ -7,6 +7,93 @@ import { z } from "zod";
 import { extractMarketplaceIntent } from "../services/groqStructuredOutput";
 
 /**
+ * Alternative marketplace intent extraction using ngrok endpoint
+ */
+async function extractMarketplaceIntentNgrok(userPrompt: string) {
+    console.log("🔍 [Ngrok] Calling classify endpoint...");
+    console.log("🔍 [Ngrok] Input text:", userPrompt);
+
+    const encodedText = encodeURIComponent(userPrompt);
+    const url = `https://uncostly-almeda-unconsumed.ngrok-free.dev/classify?text=${encodedText}`;
+    console.log("🔍 [Ngrok] URL:", url);
+
+    try {
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'ngrok-skip-browser-warning': 'true', // Skip ngrok browser warning
+            }
+        });
+
+        console.log("📡 [Ngrok] Response status:", response.status);
+        console.log("📡 [Ngrok] Response headers:", Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error("❌ [Ngrok] Error response body:", errorText);
+            throw new Error(`Ngrok API Error: ${response.status} - ${errorText}`);
+        }
+
+        const responseText = await response.text();
+        console.log("📥 [Ngrok] Raw response text:", responseText);
+
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error("❌ [Ngrok] JSON parse error:", parseError);
+            throw new Error(`Invalid JSON response: ${responseText}`);
+        }
+
+        console.log("📥 [Ngrok] Parsed response:", data);
+
+        // Transform ngrok response to match groq format
+        const result = {
+            topic: data.action.topic,
+            selection: data.action.topic === "Freelance Job"
+                ? { category: data.action.category, skill: data.action.skill }
+                : { subtopic: data.action.category || data.action.skill || "Other" },
+            action: data.action_type.toLowerCase(), // "Sell" -> "sell"
+            description: userPrompt
+        };
+
+        console.log("✅ [Ngrok] Transformed result:", result);
+        return result;
+
+    } catch (error) {
+        console.error("🔥 [Ngrok] Detailed error:", error);
+        console.error("🔥 [Ngrok] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+        throw error;
+    }
+}
+
+/**
+ * Parallel execution of both groq and ngrok endpoints
+ */
+async function extractMarketplaceIntentParallel(userPrompt: string) {
+    console.log("🚀 [Parallel] Starting both extractions...");
+
+    const [groqResult, ngrokResult] = await Promise.allSettled([
+        extractMarketplaceIntent(userPrompt),
+        extractMarketplaceIntentNgrok(userPrompt)
+    ]);
+
+    // Prioritize ngrok result, fallback to groq
+    if (ngrokResult.status === 'fulfilled') {
+        console.log("✅ [Parallel] Using ngrok result");
+        return ngrokResult.value;
+    } else if (groqResult.status === 'fulfilled') {
+        console.log("⚠️ [Parallel] Ngrok failed, using groq fallback");
+        console.warn("Ngrok error:", ngrokResult.reason);
+        return groqResult.value;
+    } else {
+        console.error("❌ [Parallel] Both endpoints failed");
+        throw new Error("Both classification endpoints failed");
+    }
+}
+
+/**
  * Tool: Extract Marketplace Intent
  * 
  * Khi người dùng muốn mua/bán/trao đổi, tool này sẽ:
@@ -33,7 +120,7 @@ Tool sẽ trả về JSON structured với:
         console.log("[K2 Tool] extractMarketplaceIntent START", { input });
 
         try {
-            const result = await extractMarketplaceIntent(input.userPrompt);
+            const result = await extractMarketplaceIntentParallel(input.userPrompt);
             console.log("[K2 Tool] extractMarketplaceIntent SUCCESS", result);
 
             // Format response for user

@@ -3,6 +3,16 @@
  * Dark mode first, inspired by modern trading UI
  */
 
+/* CSS Variables for blue theme */
+:root {
+    --form-blue-primary: #58a6ff;
+    --form-blue-secondary: #4DA6FF;
+    --form-blue-light: rgba(88, 166, 255, 0.1);
+    --form-blue-glow: rgba(0, 100, 255, 0.6);
+    --form-blue-hover: rgba(0, 110, 255, 0.8);
+    --form-blue-border: rgba(130, 200, 255, 0.5);
+}
+
 /* Skeleton Loading Animation */
 @keyframes shimmer {
     0% {
@@ -90,7 +100,7 @@
     left: 0;
     right: 0;
     height: 2px;
-    background: #469AEC;
+    background: var(--form-blue-secondary);
     border-radius: 2px 2px 0 0;
 }
 
@@ -109,9 +119,9 @@
     margin-right: auto;
     width: 600px;
     padding: 24px;
-    background: #161b22;
+    background: #222226;
     border-radius: 12px;
-    border: 1px solid #30363d;
+    border: 1px solid #333336;
 }
 
 .form-header {
@@ -151,11 +161,11 @@
 /* Action Toggle (Buy/Sell/Exchange) */
 .action-toggle {
     display: flex;
-    background: #0d1117;
+    background: #1a1a1e;
     border-radius: 8px;
     padding: 4px;
     margin-bottom: 24px;
-    border: 1px solid #30363d;
+    border: 1px solid #333336;
 }
 
 .action-btn {
@@ -232,8 +242,8 @@
 .form-input {
     width: 100%;
     padding: 12px 14px;
-    background: #0d1117;
-    border: 1px solid #30363d;
+    background: #1a1a1e;
+    border: 1px solid #333336;
     border-radius: 8px;
     color: #f0f6fc;
     font-size: 14px;
@@ -243,8 +253,8 @@
 
 .form-input:focus {
     outline: none;
-    border-color: #58a6ff;
-    box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.15);
+    border-color: var(--form-blue-primary);
+    box-shadow: 0 0 0 3px var(--form-blue-light);
 }
 
 .form-input::placeholder {
@@ -267,10 +277,10 @@
 
 /* Price Range Slider */
 .price-range-container {
-    background: #0d1117;
+    background: #1a1a1e;
     border-radius: 8px;
     padding: 16px;
-    border: 1px solid #30363d;
+    border: 1px solid #333336;
 }
 
 .price-range-header {
@@ -280,7 +290,7 @@
 }
 
 .price-value {
-    color: #58a6ff;
+    color: var(--form-blue-primary);
     font-size: 16px;
     font-weight: 600;
 }
@@ -298,10 +308,10 @@
     appearance: none;
     width: 18px;
     height: 18px;
-    background: linear-gradient(135deg, #2d8cf0, #1a73e8);
+    background: var(--form-blue-secondary);
     border-radius: 50%;
     cursor: pointer;
-    border: 2px solid #161b22;
+    border: 2px solid #222226;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
@@ -315,10 +325,10 @@
     flex: 1;
     display: flex;
     align-items: center;
-    background: #161b22;
+    background: #222226;
     border-radius: 6px;
     padding: 8px 12px;
-    border: 1px solid #30363d;
+    border: 1px solid #333336;
 }
 
 .price-input-group input {
@@ -352,8 +362,8 @@
     align-items: center;
     gap: 6px;
     padding: 8px 14px;
-    background: #0d1117;
-    border: 1px solid #30363d;
+    background: #1a1a1e;
+    border: 1px solid #333336;
     border-radius: 6px;
     color: #8b949e;
     font-size: 13px;
@@ -362,23 +372,23 @@
 }
 
 .tag:hover {
-    border-color: #58a6ff;
+    border-color: var(--form-blue-primary);
     color: #f0f6fc;
 }
 
 .tag.selected {
     background: #21262d;
-    border-color: #58a6ff;
-    color: #58a6ff;
+    border-color: var(--form-blue-primary);
+    color: var(--form-blue-primary);
 }
 
 .tag-prefix {
-    color: #58a6ff;
+    color: var(--form-blue-primary);
     font-weight: 500;
 }
 
 .tag.selected .tag-prefix {
-    color: #58a6ff;
+    color: var(--form-blue-primary);
 }
 
 /* Condition Selector */
@@ -390,8 +400,8 @@
 .condition-option {
     flex: 1;
     padding: 10px;
-    background: #0d1117;
-    border: 1px solid #30363d;
+    background: #1a1a1e;
+    border: 1px solid #333336;
     border-radius: 6px;
     color: #8b949e;
     font-size: 13px;
@@ -401,14 +411,14 @@
 }
 
 .condition-option:hover {
-    border-color: #58a6ff;
+    border-color: var(--form-blue-primary);
     color: #f0f6fc;
 }
 
 .condition-option.selected {
     background: #21262d;
-    border-color: #58a6ff;
-    color: #58a6ff;
+    border-color: var(--form-blue-primary);
+    color: var(--form-blue-primary);
 }
 
 /* Topic Specific Styles */
@@ -449,17 +459,14 @@
     gap: 12px;
     margin-top: 28px;
     padding-top: 24px;
-    border-top: 1px solid #30363d;
+    border-top: 1px solid #333336;
 }
 
 .btn-submit {
     flex: 1;
     padding: 14px 24px;
-    background: #469AEC;
-    /* border: 1px solid rgba(130, 200, 255, 0.5); */
-    /* Highlighted top border */
+    background: var(--form-blue-secondary);
     border-radius: 8px;
-    /* Smoother corners */
     color: #ffffff;
     font-size: 15px;
     font-weight: 600;
@@ -472,20 +479,24 @@
 }
 
 .btn-submit:hover {
-    background: rgba(0, 110, 255, 0.8);
-    border-color: rgba(180, 220, 255, 0.8);
+    background: var(--form-blue-hover);
+    border-color: var(--form-blue-border);
     box-shadow:
-        0 0 35px rgba(0, 100, 255, 0.6),
+        0 0 35px var(--form-blue-glow),
         inset 0 0 20px rgba(255, 255, 255, 0.2);
     transform: translateY(-1px);
+}
+
+.btn-submit:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    transform: none;
 }
 
 .btn-cancel {
     padding: 14px 24px;
     background: transparent;
-    border: 1px solid #30363d;
+    border: 1px solid #333336;
     border-radius: 8px;
     color: #8b949e;
     font-size: 14px;
