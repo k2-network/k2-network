@@ -686,3 +686,15 @@
         width: 100vw;
     }
 }
+
+/* Generated Component Wrapper */
+.generated-component-wrapper {
+    margin-top: 12px;
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.generated-component-wrapper>* {
+    margin: 0 !important;
+}

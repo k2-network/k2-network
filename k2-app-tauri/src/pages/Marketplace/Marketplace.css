@@ -191,3 +191,47 @@
         padding: 16px 20px;
     }
 }
+
+/* Create Request Tab Styles */
+.create-request-tab {
+    padding: 0;
+}
+
+.empty-form-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+    background: #222226;
+    border-radius: 16px;
+    border: 1px dashed #3c3c3c;
+    margin: 20px 0;
+}
+
+.empty-form-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.8;
+}
+
+.empty-form-state h3 {
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.empty-form-state p {
+    color: #9d9d9d;
+    font-size: 14px;
+    margin: 0 0 12px 0;
+    max-width: 400px;
+}
+
+.empty-form-hint {
+    color: #6d6d6d;
+    font-size: 13px;
+    font-style: italic;
+}

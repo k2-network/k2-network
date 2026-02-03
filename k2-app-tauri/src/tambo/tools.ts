@@ -190,7 +190,7 @@ Bạn có muốn tạo yêu cầu tìm kiếm không?
     outputSchema: z.string().describe("Kết quả tìm kiếm")
 };
 
-// Export all tools
+// Export all tools (removed prepareDynamicFormTool - using component instead)
 export const tamboTools = [
     extractMarketplaceIntentTool,
     createTradeRequestTool,

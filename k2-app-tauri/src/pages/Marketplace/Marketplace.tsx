@@ -1,4 +1,8 @@
+import { useState, useEffect } from "react";
 import "./Marketplace.css";
+import { MarketplaceTabs, DynamicRequestForm, SkeletonForm } from "../../components/DynamicForm";
+import type { TabType } from "../../components/DynamicForm/MarketplaceTabs";
+import type { DynamicFormFields } from "../../components/DynamicForm";
 // Digital Digital Assets Icons
 import videoIcon from "../../assets/icons/video.svg";
 import imagesIcon from "../../assets/icons/images.svg";
@@ -121,64 +125,126 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 export function MarketplacePage() {
+    const [activeTab, setActiveTab] = useState<TabType>('discover');
+    const [formData, setFormData] = useState<Partial<DynamicFormFields> | null>(null);
+    const [isFormStreaming, setIsFormStreaming] = useState(false);
+
+    // Listen for form data from AI chat (via custom event or context)
+    useEffect(() => {
+        const handleFormData = (event: CustomEvent<{ data: Partial<DynamicFormFields>, streaming?: boolean }>) => {
+            console.log("📋 [Marketplace] Received form data:", event.detail);
+            setFormData(event.detail.data);
+            setIsFormStreaming(event.detail.streaming || false);
+            setActiveTab('create'); // Auto switch to create tab
+        };
+
+        window.addEventListener('k2:showDynamicForm' as any, handleFormData);
+        return () => {
+            window.removeEventListener('k2:showDynamicForm' as any, handleFormData);
+        };
+    }, []);
+
+    const handleFormSubmit = (data: DynamicFormFields) => {
+        console.log("📤 [Marketplace] Form submitted:", data);
+        // TODO: Dispatch to P2P network
+        // For now, emit event for chat to handle
+        window.dispatchEvent(new CustomEvent('k2:formSubmitted', { detail: data }));
+    };
+
+    const handleFormCancel = () => {
+        setFormData(null);
+        setActiveTab('discover');
+    };
+
     return (
         <div className="marketplace-content">
-            <h2 className="discover-title">Discover Deals</h2>
+            {/* Tab Navigation */}
+            <MarketplaceTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-            {/* Digital Assets Section */}
-            <section className="category-section">
-                <h3 className="section-label">Digital Assets</h3>
-                <div className="category-grid">
-                    {digitalAssets.map((item) => (
-                        <div key={item.id} className="category-card">
-                            <div className="card-icon">{iconMap[item.icon]}</div>
-                            <div className="card-info">
-                                <span className="card-name">{item.name}</span>
-                                <span className="card-traders">{item.traders}</span>
-                            </div>
-                        </div>
-                    ))}
-                </div>
-            </section>
+            {/* Tab Content */}
+            {activeTab === 'discover' ? (
+                <>
+                    <h2 className="discover-title">Discover Deals</h2>
 
-            {/* Goods Section */}
-            <section className="category-section">
-                <h3 className="section-label">Goods</h3>
-                <div className="category-grid">
-                    {goods.map((item) => (
-                        <div key={item.id} className="category-card">
-                            <div className="card-icon">{iconMap[item.icon]}</div>
-                            <div className="card-info">
-                                <span className="card-name">{item.name}</span>
-                                <span className="card-traders">{item.traders}</span>
-                            </div>
+                    {/* Digital Assets Section */}
+                    <section className="category-section">
+                        <h3 className="section-label">Digital Assets</h3>
+                        <div className="category-grid">
+                            {digitalAssets.map((item) => (
+                                <div key={item.id} className="category-card">
+                                    <div className="card-icon">{iconMap[item.icon]}</div>
+                                    <div className="card-info">
+                                        <span className="card-name">{item.name}</span>
+                                        <span className="card-traders">{item.traders}</span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    ))}
-                </div>
-            </section>
+                    </section>
 
-            {/* Freelance Job Section */}
-            <section className="category-section">
-                <h3 className="section-label">Freelance Job</h3>
-                <div className="job-grid">
-                    {freelanceJobs.map((job) => (
-                        <div key={job.id} className="job-card">
-                            <div className="job-header">
-                                <span className="job-icon" style={{ color: job.color }}>
-                                    {iconMap[job.icon]}
-                                </span>
-                                <span className="job-name">{job.name}</span>
-                            </div>
-                            <ul className="job-details">
-                                {job.details.map((detail, idx) => (
-                                    <li key={idx}>{detail}</li>
-                                ))}
-                            </ul>
-                            <span className="job-count">{job.jobs}</span>
+                    {/* Goods Section */}
+                    <section className="category-section">
+                        <h3 className="section-label">Goods</h3>
+                        <div className="category-grid">
+                            {goods.map((item) => (
+                                <div key={item.id} className="category-card">
+                                    <div className="card-icon">{iconMap[item.icon]}</div>
+                                    <div className="card-info">
+                                        <span className="card-name">{item.name}</span>
+                                        <span className="card-traders">{item.traders}</span>
+                                    </div>
+                                </div>
+                            ))}
                         </div>
-                    ))}
+                    </section>
+
+                    {/* Freelance Job Section */}
+                    <section className="category-section">
+                        <h3 className="section-label">Freelance Job</h3>
+                        <div className="job-grid">
+                            {freelanceJobs.map((job) => (
+                                <div key={job.id} className="job-card">
+                                    <div className="job-header">
+                                        <span className="job-icon" style={{ color: job.color }}>
+                                            {iconMap[job.icon]}
+                                        </span>
+                                        <span className="job-name">{job.name}</span>
+                                    </div>
+                                    <ul className="job-details">
+                                        {job.details.map((detail, idx) => (
+                                            <li key={idx}>{detail}</li>
+                                        ))}
+                                    </ul>
+                                    <span className="job-count">{job.jobs}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                </>
+            ) : (
+                /* Create Request Tab */
+                <div className="create-request-tab">
+                    {isFormStreaming && !formData ? (
+                        <SkeletonForm />
+                    ) : formData ? (
+                        <DynamicRequestForm
+                            initialData={formData}
+                            onSubmit={handleFormSubmit}
+                            onCancel={handleFormCancel}
+                            isStreaming={isFormStreaming}
+                        />
+                    ) : (
+                        <div className="empty-form-state?">
+                            {/* <div className="empty-form-icon">📝</div>
+                            <h3>Tạo yêu cầu mới</h3>
+                            <p>Chat với AI Assistant để bắt đầu tạo yêu cầu mua/bán/trao đổi.</p>
+                            <p className="empty-form-hint">
+                                Ví dụ: "Tôi muốn mua iPhone 15 Pro" hoặc "Bán dịch vụ thiết kế UI/UX"
+                            </p> */}
+                        </div>
+                    )}
                 </div>
-            </section>
+            )}
         </div>
     );
 }

@@ -7,7 +7,7 @@ import {
   useTamboThreadInput,
   GenerationStage,
 } from "@tambo-ai/react";
-import { TAMBO_API_KEY, tamboTools } from '../../tambo';
+import { TAMBO_API_KEY, tamboTools, tamboComponents } from '../../tambo';
 import './ChatInterface.css';
 import aiAgentIconLight from '../../assets/icons/ai-agent-large.svg';
 import aiAgentIconDark from '../../assets/icons/ai-agent-large-dark.svg';
@@ -138,6 +138,35 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+
+  // Parse form data from AI response and trigger Marketplace form
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.role === 'assistant' && Array.isArray(lastMessage.content)) {
+        // Look for form data in text content
+        for (const block of lastMessage.content) {
+          if ((block as any).type === 'text') {
+            const text = (block as any).text || '';
+            // Check for form data markers
+            const formDataMatch = text.match(/<!-- FORM_DATA_START -->\s*([\s\S]*?)\s*<!-- FORM_DATA_END -->/);
+            if (formDataMatch) {
+              try {
+                const formData = JSON.parse(formDataMatch[1]);
+                console.log("📋 [ChatInterface] Extracted form data:", formData);
+                // Dispatch event to Marketplace
+                window.dispatchEvent(new CustomEvent('k2:showDynamicForm', {
+                  detail: { data: formData, streaming: false }
+                }));
+              } catch (err) {
+                console.error("Failed to parse form data:", err);
+              }
+            }
+          }
+        }
+      }
+    }
+  }, [messages]);
 
   // Handle resize
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -318,13 +347,19 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
                     </div>
                   </div>
                 ) : (
-                  messages.map((msg) => {
+                  messages.map((msg: any) => {
                     // Tambo messages have content as array of { type, text }
                     const content = typeof msg.content === 'string'
                       ? msg.content
                       : Array.isArray(msg.content)
-                        ? msg.content.map((c: any) => c.text || '').join('\n')
+                        ? msg.content
+                          .filter((c: any) => c.type === 'text')
+                          .map((c: any) => c.text || '')
+                          .join('\n')
                         : '';
+
+                    // Check if message has a rendered component
+                    const hasRenderedComponent = msg.renderedComponent !== undefined && msg.renderedComponent !== null;
 
                     return (
                       <div key={msg.id} className={`message ${msg.role}`}>
@@ -332,7 +367,15 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
                           <img src={aiAgentIcon} alt="AI" className="ai-agent-large message-avatar" style={{ width: 28, height: 28, flexShrink: 0 }} />
                         )}
                         <div className="message-content">
-                          <MarkdownContent content={content} />
+                          {/* Render text content */}
+                          {content && <MarkdownContent content={content} />}
+
+                          {/* Render Tambo generated component */}
+                          {hasRenderedComponent && (
+                            <div className="generated-component-wrapper">
+                              {msg.renderedComponent}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );
@@ -393,7 +436,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = (props) => {
   return (
     <TamboProvider
       apiKey={TAMBO_API_KEY}
-      components={[]}
+      components={tamboComponents}
       tools={tamboTools}
       contextKey="k2-marketplace"
     >
