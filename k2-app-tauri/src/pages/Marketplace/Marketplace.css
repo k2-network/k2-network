@@ -150,10 +150,16 @@
     font-size: 14px;
     color: #858585;
     line-height: 1.8;
+    padding-left: 12px;
+    position: relative;
 }
 
 .job-details li::before {
-    content: "";
+    content: "•";
+    color: #858585;
+    position: absolute;
+    left: 0;
+    top: 0;
 }
 
 .job-count {

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Sidebar, Header } from "./components";
 import { MarketplacePage, NegotiationPage, ContactPage, ProfilePage } from "./pages";
+import ChatInterface from "./components/Chat/ChatInterface";
 import { TabType, TAB_LABELS } from "./types";
 import "./App.css";
 
@@ -9,6 +10,11 @@ function App() {
   const [activeTab, setActiveTab] = useState<TabType>("marketplace");
   const [nodeId, setNodeId] = useState<string>("");
   const [_initStatus, setInitStatus] = useState("Initializing...");
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatWidth, setChatWidth] = useState(() => {
+    const saved = localStorage.getItem('k2-chat-width');
+    return saved ? parseInt(saved) : 380;
+  });
 
   useEffect(() => {
     const initNode = async () => {
@@ -51,6 +57,15 @@ function App() {
           {renderContent()}
         </div>
       </main>
+      <ChatInterface
+        isOpen={isChatOpen}
+        onToggle={() => setIsChatOpen(!isChatOpen)}
+        width={chatWidth}
+        onWidthChange={(w) => {
+          setChatWidth(w);
+          localStorage.setItem('k2-chat-width', w.toString());
+        }}
+      />
     </div>
   );
 }
