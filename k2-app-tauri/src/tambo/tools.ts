@@ -7,85 +7,107 @@ import { z } from "zod";
 import { extractMarketplaceIntent } from "../services/groqStructuredOutput";
 
 /**
- * Alternative marketplace intent extraction using ngrok endpoint
+ * Alternative marketplace intent extraction using K2 DigitalOcean endpoint
  */
-async function extractMarketplaceIntentNgrok(userPrompt: string) {
-    console.log("🔍 [Ngrok] Calling classify endpoint...");
-    console.log("🔍 [Ngrok] Input text:", userPrompt);
+async function extractMarketplaceIntentK2(userPrompt: string) {
+    console.log("🔍 [K2-DO] Calling classify endpoint...");
+    console.log("🔍 [K2-DO] Input text:", userPrompt);
 
     const encodedText = encodeURIComponent(userPrompt);
-    const url = `https://uncostly-almeda-unconsumed.ngrok-free.dev/classify?text=${encodedText}`;
-    console.log("🔍 [Ngrok] URL:", url);
+    const url = `http://139.59.125.159:8001/post?user_input=${encodedText}`;
+    console.log("🔍 [K2-DO] URL:", url);
 
     try {
         const response = await fetch(url, {
-            method: 'GET',
+            method: 'POST',
             headers: {
                 'Accept': 'application/json',
-                'ngrok-skip-browser-warning': 'true', // Skip ngrok browser warning
             }
         });
 
-        console.log("📡 [Ngrok] Response status:", response.status);
-        console.log("📡 [Ngrok] Response headers:", Object.fromEntries(response.headers.entries()));
+        console.log("📡 [K2-DO] Response status:", response.status);
+        console.log("📡 [K2-DO] Response headers:", Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
             const errorText = await response.text();
-            console.error("❌ [Ngrok] Error response body:", errorText);
-            throw new Error(`Ngrok API Error: ${response.status} - ${errorText}`);
+            console.error("❌ [K2-DO] Error response body:", errorText);
+            throw new Error(`K2 API Error: ${response.status} - ${errorText}`);
         }
 
         const responseText = await response.text();
-        console.log("📥 [Ngrok] Raw response text:", responseText);
+        console.log("📥 [K2-DO] Raw response text (length " + responseText.length + "):", responseText);
+        console.log("📥 [K2-DO] Raw response type:", typeof responseText);
+
+        // Check if response is empty
+        if (!responseText || responseText.trim() === '') {
+            throw new Error('Empty response from K2 API');
+        }
 
         let data;
         try {
             data = JSON.parse(responseText);
+            console.log("📥 [K2-DO] First JSON parse, data type:", typeof data);
+
+            // Handle double-encoded JSON (server returns string instead of object)
+            if (typeof data === 'string') {
+                console.log("📥 [K2-DO] Data is string, parsing again...");
+                data = JSON.parse(data);
+                console.log("📥 [K2-DO] Second JSON parse, data type:", typeof data);
+            }
         } catch (parseError) {
-            console.error("❌ [Ngrok] JSON parse error:", parseError);
-            throw new Error(`Invalid JSON response: ${responseText}`);
+            console.error("❌ [K2-DO] JSON parse error:", parseError);
+            console.error("❌ [K2-DO] Response that failed to parse:", JSON.stringify(responseText));
+            throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}...`);
         }
 
-        console.log("📥 [Ngrok] Parsed response:", data);
+        console.log("📥 [K2-DO] Parsed response:", data);
 
-        // Transform ngrok response to match groq format
+        // Validate response structure
+        if (!data || typeof data !== 'object' || !data.action || !data.action_type) {
+            throw new Error(`Invalid response structure: ${JSON.stringify(data)}`);
+        }
+
+        // Transform K2 response to match groq format
         const result = {
             topic: data.action.topic,
             selection: data.action.topic === "Freelance Job"
-                ? { category: data.action.category, skill: data.action.skill }
-                : { subtopic: data.action.category || data.action.skill || "Other" },
+                ? {
+                    category: data.action.category || "Tech & IT",
+                    skill: data.action.skill || "Web & Mobile Development"
+                }
+                : { subtopic: data.action.subtopic || "Other" },
             action: data.action_type.toLowerCase(), // "Sell" -> "sell"
             description: userPrompt
         };
 
-        console.log("✅ [Ngrok] Transformed result:", result);
+        console.log("✅ [K2-DO] Transformed result:", result);
         return result;
 
     } catch (error) {
-        console.error("🔥 [Ngrok] Detailed error:", error);
-        console.error("🔥 [Ngrok] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
+        console.error("🔥 [K2-DO] Detailed error:", error);
+        console.error("🔥 [K2-DO] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
         throw error;
     }
 }
 
 /**
- * Parallel execution of both groq and ngrok endpoints
+ * Parallel execution of both groq and K2 endpoints
  */
 async function extractMarketplaceIntentParallel(userPrompt: string) {
     console.log("🚀 [Parallel] Starting both extractions...");
 
-    const [groqResult, ngrokResult] = await Promise.allSettled([
+    const [groqResult, k2Result] = await Promise.allSettled([
         extractMarketplaceIntent(userPrompt),
-        extractMarketplaceIntentNgrok(userPrompt)
+        extractMarketplaceIntentK2(userPrompt)
     ]);
 
-    // Prioritize ngrok result, fallback to groq
-    if (ngrokResult.status === 'fulfilled') {
-        console.log("✅ [Parallel] Using ngrok result");
-        return ngrokResult.value;
+    // Prioritize K2 result, fallback to groq
+    if (k2Result.status === 'fulfilled') {
+        console.log("✅ [Parallel] Using K2 result");
+        return k2Result.value;
     } else if (groqResult.status === 'fulfilled') {
-        console.log("⚠️ [Parallel] Ngrok failed, using groq fallback");
-        console.warn("Ngrok error:", ngrokResult.reason);
+        console.log("⚠️ [Parallel] K2 failed, using groq fallback");
+        console.warn("K2 error:", k2Result.reason);
         return groqResult.value;
     } else {
         console.error("❌ [Parallel] Both endpoints failed");
