@@ -11,6 +11,8 @@ import { TAMBO_API_KEY, tamboTools, tamboComponents } from '../../tambo';
 import './ChatInterface.css';
 import aiAgentIconLight from '../../assets/icons/ai-agent-large.svg';
 import aiAgentIconDark from '../../assets/icons/ai-agent-large-dark.svg';
+import { StartTransactionButton } from './StartTransactionButton';
+import type { DynamicFormFields } from '../DynamicForm/types';
 
 const DEFAULT_SUGGESTIONS = [
   "Tôi muốn mua video",
@@ -122,6 +124,12 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
   const [groqApiKey, setGroqApiKey] = useState<string>(() => {
     return localStorage.getItem('groq-api-key') || import.meta.env.VITE_GROQ_API_KEY || '';
   });
+  // State for "Bắt đầu giao dịch" button
+  const [startButtonData, setStartButtonData] = useState<{
+    formData: Partial<DynamicFormFields>;
+    actionText: string;
+    title: string;
+  } | null>(null);
 
   // Save Groq API key to localStorage
   const handleGroqApiKeyChange = (value: string) => {
@@ -167,6 +175,23 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
       }
     }
   }, [messages]);
+
+  // Listen for "Bắt đầu giao dịch" button event from tools
+  useEffect(() => {
+    const handleShowStartButton = (event: CustomEvent<{
+      formData: Partial<DynamicFormFields>;
+      actionText: string;
+      title: string;
+    }>) => {
+      console.log("🔘 [ChatInterface] Received start button event:", event.detail);
+      setStartButtonData(event.detail);
+    };
+
+    window.addEventListener('k2:showStartButton' as any, handleShowStartButton);
+    return () => {
+      window.removeEventListener('k2:showStartButton' as any, handleShowStartButton);
+    };
+  }, []);
 
   // Handle resize
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -393,6 +418,20 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
                         <span className="typing-dot"></span>
                         <span className="typing-text">Đang xử lý...</span>
                       </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Start Transaction Button - shown after form creation */}
+                {startButtonData && !isProcessing && (
+                  <div className="message assistant">
+                    <img src={aiAgentIcon} alt="AI" className="ai-agent-large message-avatar" style={{ width: 28, height: 28, flexShrink: 0 }} />
+                    <div className="message-content">
+                      <StartTransactionButton
+                        formData={startButtonData.formData}
+                        actionText={startButtonData.actionText}
+                        title={startButtonData.title}
+                      />
                     </div>
                   </div>
                 )}

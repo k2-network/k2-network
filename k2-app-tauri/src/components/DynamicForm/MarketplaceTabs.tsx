@@ -2,12 +2,13 @@
  * Tab System for Marketplace
  * Tab 1: Discover Deals - Browse existing offers
  * Tab 2: Create Request - Dynamic form for creating new requests
+ * Tab 3: Finding Match - P2P discovery in progress
  */
 import React from 'react';
-import { IoSearch, IoAddCircle } from 'react-icons/io5';
+import { IoSearch, IoAddCircle, IoRadio } from 'react-icons/io5';
 import './DynamicForm.css';
 
-export type TabType = 'discover' | 'create';
+export type TabType = 'discover' | 'create' | 'finding';
 
 interface MarketplaceTabsProps {
     activeTab: TabType;
@@ -37,6 +38,15 @@ export const MarketplaceTabs: React.FC<MarketplaceTabsProps> = ({
                     <IoAddCircle />
                 </span>
                 Create Request
+            </button>
+            <button
+                className={`form-tab ${activeTab === 'finding' ? 'active' : ''}`}
+                onClick={() => onTabChange('finding')}
+            >
+                <span className="form-tab-icon">
+                    <IoRadio />
+                </span>
+                Finding Match
             </button>
         </div>
     );

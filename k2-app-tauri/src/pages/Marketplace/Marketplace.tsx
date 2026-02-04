@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import "./Marketplace.css";
-import { MarketplaceTabs, DynamicRequestForm, SkeletonForm } from "../../components/DynamicForm";
-import type { TabType } from "../../components/DynamicForm/MarketplaceTabs";
+import { MarketplaceTabs, DynamicRequestForm, SkeletonForm, DiscoveryView } from "../../components/DynamicForm";
+import type { TabType } from "../../components/DynamicForm";
 import type { DynamicFormFields } from "../../components/DynamicForm";
 // Digital Digital Assets Icons
 import videoIcon from "../../assets/icons/video.svg";
@@ -128,6 +128,7 @@ export function MarketplacePage() {
     const [activeTab, setActiveTab] = useState<TabType>('discover');
     const [formData, setFormData] = useState<Partial<DynamicFormFields> | null>(null);
     const [isFormStreaming, setIsFormStreaming] = useState(false);
+    const [discoveryFormData, setDiscoveryFormData] = useState<DynamicFormFields | null>(null);
 
     // Listen for form data from AI chat (via custom event or context)
     useEffect(() => {
@@ -138,9 +139,18 @@ export function MarketplacePage() {
             setActiveTab('create'); // Auto switch to create tab
         };
 
+        // Listen for start discovery event (from chat "Bắt đầu giao dịch" button)
+        const handleStartDiscovery = (event: CustomEvent<{ formData: DynamicFormFields }>) => {
+            console.log("🔍 [Marketplace] Starting discovery:", event.detail);
+            setDiscoveryFormData(event.detail.formData);
+            setActiveTab('finding'); // Switch to finding tab
+        };
+
         window.addEventListener('k2:showDynamicForm' as any, handleFormData);
+        window.addEventListener('k2:startDiscovery' as any, handleStartDiscovery);
         return () => {
             window.removeEventListener('k2:showDynamicForm' as any, handleFormData);
+            window.removeEventListener('k2:startDiscovery' as any, handleStartDiscovery);
         };
     }, []);
 
@@ -221,7 +231,7 @@ export function MarketplacePage() {
                         </div>
                     </section>
                 </>
-            ) : (
+            ) : activeTab === 'create' ? (
                 /* Create Request Tab */
                 <div className="create-request-tab">
                     {isFormStreaming && !formData ? (
@@ -234,15 +244,23 @@ export function MarketplacePage() {
                             isStreaming={isFormStreaming}
                         />
                     ) : (
-                        <div className="empty-form-state?">
-                            {/* <div className="empty-form-icon">📝</div>
-                            <h3>Tạo yêu cầu mới</h3>
-                            <p>Chat với AI Assistant để bắt đầu tạo yêu cầu mua/bán/trao đổi.</p>
-                            <p className="empty-form-hint">
-                                Ví dụ: "Tôi muốn mua iPhone 15 Pro" hoặc "Bán dịch vụ thiết kế UI/UX"
-                            </p> */}
+                        <div className="empty-form-state">
+                            {/* Empty state when no form yet */}
                         </div>
                     )}
+                </div>
+            ) : (
+                /* Finding Match Tab */
+                <div className="finding-match-tab">
+                    <DiscoveryView
+                        formData={discoveryFormData}
+                        onMatchFound={(count) => {
+                            console.log(`🎯 [Marketplace] Found ${count} matches`);
+                        }}
+                        onCancel={() => {
+                            setActiveTab('create');
+                        }}
+                    />
                 </div>
             )}
         </div>

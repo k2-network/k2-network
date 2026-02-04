@@ -364,10 +364,19 @@ VÍ DỤ:
                 description: input.description,
             };
 
-            // Dispatch event to Marketplace
+            // Dispatch event to Marketplace to show form
             if (typeof window !== 'undefined') {
                 window.dispatchEvent(new CustomEvent('k2:showDynamicForm', {
                     detail: { data: formData, streaming: false }
+                }));
+
+                // Dispatch event to show "Bắt đầu giao dịch" button in chat
+                window.dispatchEvent(new CustomEvent('k2:showStartButton', {
+                    detail: {
+                        formData,
+                        actionText: actionLabels[input.action] || input.action,
+                        title: input.title || input.topic
+                    }
                 }));
             }
 
@@ -378,7 +387,8 @@ VÍ DỤ:
 ${input.title ? `**Tiêu đề:** ${input.title}` : ""}
 ${input.description ? `**Mô tả:** ${input.description}` : ""}
 
-Vui lòng kiểm tra tab **Create Request** bên trái để xem và gửi form.`;
+Vui lòng kiểm tra tab **Create Request** bên trái để xem form.
+Khi sẵn sàng, nhấn nút **Bắt đầu giao dịch** bên dưới để tìm người phù hợp.`;
 
             return response;
 

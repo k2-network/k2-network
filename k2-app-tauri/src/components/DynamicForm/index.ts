@@ -4,6 +4,7 @@
 export { DynamicRequestForm } from './DynamicRequestForm';
 export { MarketplaceTabs } from './MarketplaceTabs';
 export { SkeletonField, SkeletonForm } from './SkeletonField';
+export { DiscoveryView } from './DiscoveryView';
 export type {
     TopicType,
     ActionType,
@@ -14,3 +15,5 @@ export type {
     FieldLoadingState,
     DynamicRequestFormProps
 } from './types';
+export type { TabType } from './MarketplaceTabs';
+

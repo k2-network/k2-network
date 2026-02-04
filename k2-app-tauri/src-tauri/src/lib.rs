@@ -2,7 +2,7 @@ use std::path::PathBuf;
 use std::sync::Mutex;
 use tauri::State;
 use tauri::Manager;
-use k2_core::{K2Node, Contact, ContactBook};
+use k2_core::{K2Node, Contact, ContactBook, K2Marketplace};
 use qrcode::QrCode;
 use qrcode::render::svg;
 #[cfg(not(target_os = "android"))]
@@ -226,6 +226,33 @@ fn get_download_dir(app: &tauri::AppHandle) -> PathBuf {
     }
 }
 
+// ============ MARKETPLACE COMMANDS ============
+
+/// Get random broadcast delay (1-4 seconds) for marketplace
+#[tauri::command]
+fn get_broadcast_delay() -> u64 {
+    K2Marketplace::get_broadcast_delay()
+}
+
+/// Join a marketplace topic
+#[tauri::command]
+async fn join_topic(topic: String, action: String) -> Result<String, String> {
+    // For now, this is a mock implementation
+    // In full implementation, this would use iroh-gossip to join a topic
+    println!("[K2] Joining topic: {} for action: {}", topic, action);
+    let topic_id = K2Marketplace::topic_to_id(&topic);
+    Ok(format!("Joined topic: {} (ID: {:?})", topic, topic_id))
+}
+
+/// Broadcast an offer to the marketplace
+#[tauri::command]
+async fn broadcast_offer(form_data: serde_json::Value) -> Result<String, String> {
+    // Mock implementation - in full version, this broadcasts via gossip
+    println!("[K2] Broadcasting offer: {:?}", form_data);
+    let offer_id = K2Marketplace::generate_id();
+    Ok(format!("Offer broadcast: {}", offer_id))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -257,7 +284,11 @@ pub fn run() {
             share_file,
             share_bytes,
             download_file,
-            generate_qr_svg
+            generate_qr_svg,
+            // Marketplace commands
+            get_broadcast_delay,
+            join_topic,
+            broadcast_offer
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

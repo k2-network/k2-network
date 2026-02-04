@@ -1,0 +1,286 @@
+/**
+ * DiscoveryView Styles
+ * 
+ * Includes:
+ * - Ripple animation effect (3 circles with zoom in/out)
+ * - Status text transitions
+ * - Progress bar styling
+ * - Broadcast counter
+ */
+
+.discovery-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 400px;
+    padding: 40px 24px;
+    background: #1a1a1a;
+    gap: 24px;
+}
+
+.discovery-view-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: #9d9d9d;
+    text-align: center;
+    padding: 40px;
+}
+
+.discovery-view-empty p {
+    margin: 8px 0;
+}
+
+/* Status Text */
+.discovery-status {
+    text-align: center;
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.discovery-status .status-text {
+    font-size: 18px;
+    font-weight: 500;
+    color: #e0e0e0;
+    transition: all 0.5s ease;
+    opacity: 1;
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.discovery-status.found .status-text {
+    color: #4DA6FF;
+    font-size: 20px;
+}
+
+/* Visual Container with Ripple */
+.discovery-visual {
+    position: relative;
+    width: 200px;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ripple Container */
+.ripple-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Ripple Circles - 3 layers with #4DA6FF at 24% opacity */
+.ripple-circle {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(77, 166, 255, 0.24);
+    opacity: 0;
+}
+
+/* Ripple 1 - Innermost */
+.ripple-circle.ripple-1 {
+    width: 100px;
+    height: 100px;
+}
+
+/* Ripple 2 - Middle */
+.ripple-circle.ripple-2 {
+    width: 150px;
+    height: 150px;
+}
+
+/* Ripple 3 - Outermost */
+.ripple-circle.ripple-3 {
+    width: 200px;
+    height: 200px;
+}
+
+/* Ripple Animation - Zoom in/out like sonar */
+.ripple-container.animating .ripple-1 {
+    animation: ripplePulse 2s ease-in-out infinite;
+    animation-delay: 0s;
+}
+
+.ripple-container.animating .ripple-2 {
+    animation: ripplePulse 2s ease-in-out infinite;
+    animation-delay: 0.4s;
+}
+
+.ripple-container.animating .ripple-3 {
+    animation: ripplePulse 2s ease-in-out infinite;
+    animation-delay: 0.8s;
+}
+
+@keyframes ripplePulse {
+    0% {
+        opacity: 0.8;
+        transform: scale(0.8);
+    }
+
+    50% {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    100% {
+        opacity: 0.8;
+        transform: scale(0.8);
+    }
+}
+
+/* Static ripples when not animating (found state) */
+.ripple-container:not(.animating) .ripple-circle {
+    opacity: 0.6;
+    transform: scale(1);
+    transition: all 0.5s ease;
+}
+
+/* Discovery Icon (Whale) */
+.discovery-icon {
+    position: relative;
+    z-index: 10;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #2d2d30;
+    box-shadow: 0 4px 20px rgba(77, 166, 255, 0.3);
+}
+
+.discovery-icon img {
+    width: 64px;
+    height: 64px;
+}
+
+/* Progress Bar Container */
+.discovery-progress-container {
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 16px;
+}
+
+.discovery-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #3c3c3c;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.discovery-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4DA6FF 0%, #00C8FF 100%);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.discovery-progress-text {
+    font-size: 12px;
+    color: #9d9d9d;
+    min-width: 36px;
+    text-align: right;
+}
+
+/* Broadcast Info */
+.discovery-broadcast-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    color: #9d9d9d;
+    margin-top: 8px;
+}
+
+.broadcast-label {
+    color: #777;
+}
+
+.broadcast-count {
+    color: #4DA6FF;
+    font-weight: 600;
+    font-size: 18px;
+}
+
+.broadcast-unit {
+    color: #666;
+}
+
+/* Cancel Button */
+.discovery-cancel-btn {
+    margin-top: 24px;
+    padding: 10px 24px;
+    background: transparent;
+    border: 1px solid #555;
+    border-radius: 8px;
+    color: #9d9d9d;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.discovery-cancel-btn:hover {
+    border-color: #777;
+    color: #e0e0e0;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Success Actions */
+.discovery-success-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+}
+
+.discovery-view-matches-btn {
+    padding: 12px 32px;
+    background: linear-gradient(135deg, #4DA6FF 0%, #00A8FF 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 4px 15px rgba(77, 166, 255, 0.3);
+}
+
+.discovery-view-matches-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(77, 166, 255, 0.4);
+}
+
+/* Phase-specific styles */
+.discovery-status.initializing .status-text,
+.discovery-status.joining .status-text,
+.discovery-status.searching .status-text {
+    color: #e0e0e0;
+}
+
+.discovery-status.joined .status-text {
+    color: #4ec9b0;
+}
