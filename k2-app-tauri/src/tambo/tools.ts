@@ -14,7 +14,7 @@ async function extractMarketplaceIntentK2(userPrompt: string) {
     console.log("🔍 [K2-DO] Input text:", userPrompt);
 
     const encodedText = encodeURIComponent(userPrompt);
-    const url = `http://139.59.125.159:8001/post?user_input=${encodedText}`;
+    const url = `https://139.59.125.159/post?user_input=${encodedText}`;
     console.log("🔍 [K2-DO] URL:", url);
 
     try {
@@ -299,9 +299,112 @@ Bạn có muốn tạo yêu cầu tìm kiếm không?
     outputSchema: z.string().describe("Kết quả tìm kiếm")
 };
 
-// Export all tools (removed prepareDynamicFormTool - using component instead)
+/**
+ * Tool: Prepare Dynamic Form
+ * 
+ * Chuẩn bị form động để tạo yêu cầu giao dịch
+ * Dispatch event để Marketplace hiển thị form và trả về text xác nhận
+ */
+const prepareDynamicFormTool = {
+    name: "prepare-dynamic-form",
+    description: `Chuẩn bị form động để tạo yêu cầu mua/bán/trao đổi.
+
+QUAN TRỌNG - QUY TẮC SỬ DỤNG:
+1. CHỈ gọi tool này SAU KHI đã gọi extract-marketplace-intent VÀ người dùng xác nhận
+2. PHẢI sử dụng CHÍNH XÁC dữ liệu từ kết quả extract-marketplace-intent
+
+CÁC GIÁ TRỊ HỢP LỆ:
+- topic: "Digital Assets" | "Goods" | "Freelance Job"
+- action: "buy" | "sell" | "exchange"
+
+Nếu topic = "Digital Assets" hoặc "Goods":
+- subtopic: "Video" | "Images" | "Audio" | "Token" | "License | Key | Secret" | "Document" | "Source Code" | "Dataset" | "Fashion" | "Electronics & Devices" | "Books & Learning" | "Sports & Travel"
+
+Nếu topic = "Freelance Job":
+- category: "Tech & IT" | "Design & Creative" | "Writing & Translation" | "Marketing & Sales"
+- skill: "Web & Mobile Development" | "Software / App Development" | "Data Science / Analytics" | "IT Support / Networking" | "Graphic Design" | "UI/UX Design" | "Illustration / Animation" | "Video & Photo Editing" | "Content Writing / Copywriting" | "Blogging / Articles" | "Translation / Localization" | "Technical Writing" | "Digital Marketing" | "Social Media Management" | "SEO / SEM" | "Sales & Lead Generation"
+
+VÍ DỤ:
+- Intent: topic="Digital Assets", selection.subtopic="Video", action="buy"
+- Gọi tool: topic="Digital Assets", subtopic="Video", action="buy"
+- Intent: topic="Freelance Job", selection.category="Design & Creative", selection.skill="UI/UX Design", action="sell"
+- Gọi tool: topic="Freelance Job", category="Design & Creative", skill="UI/UX Design", action="sell"`,
+
+    tool: async (input: {
+        topic: string;
+        action: string;
+        subtopic?: string;
+        category?: string;
+        skill?: string;
+        title?: string;
+        description?: string;
+    }): Promise<string> => {
+        console.log("🚀 [K2 Tool] prepareDynamicForm START", { input });
+
+        try {
+            const actionLabels: Record<string, string> = {
+                buy: "MUA",
+                sell: "BÁN",
+                exchange: "TRAO ĐỔI"
+            };
+
+            // Build selection info
+            const selectionInfo = input.topic === "Freelance Job"
+                ? `${input.category || "N/A"} > ${input.skill || "N/A"}`
+                : input.subtopic || "N/A";
+
+            // Build form data
+            const formData = {
+                topic: input.topic,
+                action: input.action,
+                selection: input.topic === "Freelance Job"
+                    ? { category: input.category || "", skill: input.skill || "" }
+                    : { subtopic: input.subtopic || "" },
+                title: input.title,
+                description: input.description,
+            };
+
+            // Dispatch event to Marketplace
+            if (typeof window !== 'undefined') {
+                window.dispatchEvent(new CustomEvent('k2:showDynamicForm', {
+                    detail: { data: formData, streaming: false }
+                }));
+            }
+
+            const response = `**Đã tạo form yêu cầu giao dịch!**
+
+**Hành động:** ${actionLabels[input.action] || input.action}
+**Danh mục:** ${input.topic} > ${selectionInfo}
+${input.title ? `**Tiêu đề:** ${input.title}` : ""}
+${input.description ? `**Mô tả:** ${input.description}` : ""}
+
+Vui lòng kiểm tra tab **Create Request** bên trái để xem và gửi form.`;
+
+            return response;
+
+        } catch (error) {
+            console.error("🔥 [K2 Tool] prepareDynamicForm ERROR:", error);
+            return `❌ Không thể tạo form: ${error instanceof Error ? error.message : "Unknown error"}`;
+        }
+    },
+
+    inputSchema: z.object({
+        topic: z.string().describe("Danh mục: Digital Assets, Goods, hoặc Freelance Job"),
+        action: z.string().describe("Hành động: buy, sell, exchange"),
+        subtopic: z.string().optional().describe("Danh mục con cho Digital Assets hoặc Goods"),
+        category: z.string().optional().describe("Category cho Freelance Job"),
+        skill: z.string().optional().describe("Skill cho Freelance Job"),
+        title: z.string().optional().describe("Tiêu đề yêu cầu"),
+        description: z.string().optional().describe("Mô tả chi tiết"),
+    }),
+
+    outputSchema: z.string().describe("Kết quả tạo form")
+};
+
+// Export all tools
 export const tamboTools = [
     extractMarketplaceIntentTool,
     createTradeRequestTool,
     searchMarketplaceTool,
+    prepareDynamicFormTool,
 ];

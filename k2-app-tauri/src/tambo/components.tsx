@@ -120,6 +120,7 @@ const DynamicFormWrapper: React.FC<z.infer<typeof dynamicFormPropsSchema>> = (pr
 };
 
 // Register DynamicRequestForm as TamboComponent
+// DISABLED - Using prepareDynamicFormTool instead for separate message display
 export const DynamicRequestFormComponent: TamboComponent = {
     name: "DynamicRequestForm",
     description: `Form động để tạo yêu cầu mua/bán/trao đổi trên K2 Marketplace.
@@ -139,6 +140,5 @@ PROPS CẦN TRUYỀN:
 };
 
 // Export all Tambo components
-export const tamboComponents: TamboComponent[] = [
-    DynamicRequestFormComponent,
-];
+// Empty array - using tools instead for proper message separation
+export const tamboComponents: TamboComponent[] = [];
