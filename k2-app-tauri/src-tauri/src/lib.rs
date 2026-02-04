@@ -225,7 +225,6 @@ fn get_download_dir(app: &tauri::AppHandle) -> PathBuf {
         }
     }
 }
-
 // ============ MARKETPLACE COMMANDS ============
 
 /// Get random broadcast delay (1-4 seconds) for marketplace
@@ -234,23 +233,366 @@ fn get_broadcast_delay() -> u64 {
     K2Marketplace::get_broadcast_delay()
 }
 
-/// Join a marketplace topic
+/// Join a marketplace topic (Real P2P via iroh-gossip)
 #[tauri::command]
-async fn join_topic(topic: String, action: String) -> Result<String, String> {
-    // For now, this is a mock implementation
-    // In full implementation, this would use iroh-gossip to join a topic
-    println!("[K2] Joining topic: {} for action: {}", topic, action);
+async fn join_topic(topic: String, action: String, state: State<'_, AppState>) -> Result<String, String> {
+    println!("[K2] 🔗 Joining topic: {} for action: {}", topic, action);
+    
+    // Get node from state
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized. Please wait for node to start.")?
+    };
+    
+    // Convert topic string to TopicId
     let topic_id = K2Marketplace::topic_to_id(&topic);
-    Ok(format!("Joined topic: {} (ID: {:?})", topic, topic_id))
+    println!("[K2] Topic ID: {:?}", topic_id);
+    
+    // Actually subscribe to the topic via iroh-gossip with TRacker Discovery
+    match node.subscribe_topic_with_discovery(topic_id).await {
+        Ok(_topic_handle) => {
+            println!("[K2] ✅ Successfully joined topic: {}", topic);
+            Ok(format!("Successfully joined topic: {}", topic))
+        }
+        Err(e) => {
+            println!("[K2] ❌ Failed to join topic: {}", e);
+            Err(format!("Failed to join topic: {}", e))
+        }
+    }
 }
 
-/// Broadcast an offer to the marketplace
+/// Classify marketplace intent using Groq API (called from backend to avoid CORS)
 #[tauri::command]
-async fn broadcast_offer(form_data: serde_json::Value) -> Result<String, String> {
-    // Mock implementation - in full version, this broadcasts via gossip
-    println!("[K2] Broadcasting offer: {:?}", form_data);
-    let offer_id = K2Marketplace::generate_id();
-    Ok(format!("Offer broadcast: {}", offer_id))
+async fn classify_intent(user_prompt: String, api_key: String, base_url: Option<String>, model: Option<String>) -> Result<serde_json::Value, String> {
+    println!("[K2] 🧠 Classifying intent: {}", user_prompt);
+    
+    let base_url = base_url.unwrap_or_else(|| "https://api.groq.com/openai/v1".to_string());
+    let model = model.unwrap_or_else(|| "llama-3.3-70b-versatile".to_string());
+    
+    let client = reqwest::Client::new();
+    
+    let system_prompt = r#"Bạn là AI phân tích yêu cầu mua bán trên K2 Marketplace. Phân tích ý định của người dùng và trích xuất thông tin.
+
+Các topic:
+- "Digital Assets": Video, Images, Audio, Token, License | Key | Secret, Document, Source Code, Dataset
+- "Goods": Fashion, Electronics & Devices, Books & Learning, Sports & Travel  
+- "Freelance Job": Tech & IT, Design & Creative, Writing & Translation, Marketing & Sales
+
+Các action:
+- "buy": Người dùng muốn MUA
+- "sell": Người dùng muốn BÁN
+- "exchange": Người dùng muốn TRAO ĐỔI
+
+Trả về JSON theo format:
+{
+  "topic": "Digital Assets" | "Goods" | "Freelance Job",
+  "selection": { "subtopic": "..." } hoặc { "category": "...", "skill": "..." },
+  "action": "buy" | "sell" | "exchange",
+  "description": "mô tả yêu cầu"
+}"#;
+
+    let request_body = serde_json::json!({
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ],
+        "response_format": {"type": "json_object"}
+    });
+    
+    let response = client
+        .post(format!("{}/chat/completions", base_url))
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&request_body)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+    
+    if !response.status().is_success() {
+        let status = response.status();
+        let error_text = response.text().await.unwrap_or_default();
+        println!("[K2] ❌ Groq API error: {} - {}", status, error_text);
+        return Err(format!("Groq API error: {} - {}", status, error_text));
+    }
+    
+    let data: serde_json::Value = response.json().await.map_err(|e| format!("JSON parse error: {}", e))?;
+    
+    // Extract content from response
+    let content = data["choices"][0]["message"]["content"]
+        .as_str()
+        .ok_or("No content in response")?;
+    
+    let result: serde_json::Value = serde_json::from_str(content)
+        .map_err(|e| format!("Content parse error: {}", e))?;
+    
+    println!("[K2] ✅ Classification result: {:?}", result);
+    Ok(result)
+}
+
+/// Call K2 Endpoint (bypass SSL cert errors)
+#[tauri::command]
+async fn classify_k2_endpoint(user_prompt: String) -> Result<serde_json::Value, String> {
+    println!("[K2] 🌍 Calling K2 Endpoint (ignoring SSL): {}", user_prompt);
+    
+    // Create client that ignores invalid certs
+    let client = reqwest::Client::builder()
+        .danger_accept_invalid_certs(true)
+        .build()
+        .map_err(|e| e.to_string())?;
+
+    let url = format!("https://139.59.125.159/post?user_input={}", urlencoding::encode(&user_prompt));
+    
+    let response = client
+        .post(&url)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("K2 Endpoint error: {}", response.status()));
+    }
+    
+    let text = response.text().await.map_err(|e| e.to_string())?;
+    println!("[K2] 📥 K2 Response: {}", text);
+    
+    // Parse JSON
+    let result: serde_json::Value = serde_json::from_str(&text)
+        .map_err(|e| format!("JSON parse error: {}", e))?;
+        
+    Ok(result)
+}
+
+/// Message includes sender's nodeId so buyers can respond
+#[tauri::command]
+async fn broadcast_offer(topic: String, form_data: serde_json::Value, state: State<'_, AppState>) -> Result<String, String> {
+    println!("[K2] 📡 Broadcasting offer to topic: {}", topic);
+    
+    // Get node from state
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    
+    // Get sender's node ID
+    let my_node_id = node.my_id();
+    
+    // Build message with nodeId included
+    let mut payload = serde_json::Map::new();
+    payload.insert("sender_node_id".to_string(), serde_json::Value::String(my_node_id.clone()));
+    payload.insert("message_type".to_string(), serde_json::Value::String("offer".to_string()));
+    payload.insert("topic".to_string(), serde_json::Value::String(topic.clone()));
+    payload.insert("form_data".to_string(), form_data);
+    payload.insert("timestamp".to_string(), serde_json::Value::Number(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .into()
+    ));
+    
+    let message = serde_json::to_vec(&payload).map_err(|e| e.to_string())?;
+    println!("[K2] 📦 Payload with nodeId: {:?}", my_node_id);
+    
+    // Convert topic and broadcast via iroh-gossip
+    let topic_id = K2Marketplace::topic_to_id(&topic);
+    match node.broadcast_message(topic_id, message).await {
+        Ok(_) => {
+            let offer_id = K2Marketplace::generate_id();
+            println!("[K2] ✅ Offer broadcast successfully: {}", offer_id);
+            Ok(format!("Offer broadcast: {}", offer_id))
+        }
+        Err(e) => {
+            println!("[K2] ❌ Broadcast failed: {}", e);
+            Err(format!("Broadcast failed: {}", e))
+        }
+    }
+}
+
+/// Send interest response to a seller (Buyer -> Seller)
+/// Broadcasts on same topic with message_type="interest"
+#[tauri::command]
+async fn send_interest(topic: String, seller_node_id: String, form_data: serde_json::Value, state: State<'_, AppState>) -> Result<String, String> {
+    println!("[K2] 💰 Sending interest to seller: {}", seller_node_id);
+    
+    // Get node from state
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    
+    // Get buyer's node ID
+    let my_node_id = node.my_id();
+    
+    // Build interest message
+    let mut payload = serde_json::Map::new();
+    payload.insert("sender_node_id".to_string(), serde_json::Value::String(my_node_id.clone()));
+    payload.insert("target_node_id".to_string(), serde_json::Value::String(seller_node_id.clone()));
+    payload.insert("message_type".to_string(), serde_json::Value::String("interest".to_string()));
+    payload.insert("topic".to_string(), serde_json::Value::String(topic.clone()));
+    payload.insert("form_data".to_string(), form_data);
+    payload.insert("timestamp".to_string(), serde_json::Value::Number(
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .into()
+    ));
+    
+    let message = serde_json::to_vec(&payload).map_err(|e| e.to_string())?;
+    println!("[K2] 📦 Interest from {} to {}", my_node_id, seller_node_id);
+    
+    // Broadcast interest on same topic
+    let topic_id = K2Marketplace::topic_to_id(&topic);
+    match node.broadcast_message(topic_id, message).await {
+        Ok(_) => {
+            println!("[K2] ✅ Interest sent successfully");
+            Ok(format!("Interest sent to {}", seller_node_id))
+        }
+        Err(e) => {
+            println!("[K2] ❌ Interest send failed: {}", e);
+            Err(format!("Failed to send interest: {}", e))
+        }
+    }
+}
+
+/// Listen for offers on a topic (for Buyers)
+/// Returns received offers as JSON array
+#[tauri::command]
+async fn listen_offers(topic: String, timeout_secs: u64, state: State<'_, AppState>) -> Result<Vec<serde_json::Value>, String> {
+    use futures_util::StreamExt;
+    use iroh_gossip::api::Event;
+    
+    println!("[K2] 👂 Listening for offers on topic: {} (timeout: {}s)", topic, timeout_secs);
+    
+    // Get node from state
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    
+    // Subscribe to topic
+    let topic_id = K2Marketplace::topic_to_id(&topic);
+    let gossip_topic = node.subscribe_topic(topic_id).await.map_err(|e| e.to_string())?;
+    
+    // Split into sender and receiver (like example 12)
+    let (_sender, mut receiver) = gossip_topic.split();
+    
+    let mut received_offers: Vec<serde_json::Value> = Vec::new();
+    let timeout = std::time::Duration::from_secs(timeout_secs);
+    let start = std::time::Instant::now();
+    
+    // Listen for messages until timeout (like example 12)
+    while start.elapsed() < timeout {
+        match tokio::time::timeout(
+            std::time::Duration::from_millis(500),
+            receiver.next()
+        ).await {
+            Ok(Some(Ok(event))) => {
+                match event {
+                    Event::Received(msg) => {
+                        // Try to parse as JSON
+                        if let Ok(offer) = serde_json::from_slice::<serde_json::Value>(&msg.content) {
+                            println!("[K2] 📨 Received offer: {:?}", offer);
+                            received_offers.push(offer);
+                        }
+                    }
+                    Event::NeighborUp(id) => {
+                        println!("[K2] 🟢 Peer connected: {}...", &id.to_string()[..8]);
+                    }
+                    Event::NeighborDown(id) => {
+                        println!("[K2] 🔴 Peer disconnected: {}...", &id.to_string()[..8]);
+                    }
+                    _ => {}
+                }
+            }
+            Ok(Some(Err(e))) => {
+                println!("[K2] ⚠️ Receiver error: {}", e);
+            }
+            Ok(None) => break, // Stream ended
+            Err(_) => continue, // Timeout, try again
+        }
+    }
+    
+    println!("[K2] 📭 Listen complete. Received {} offers", received_offers.len());
+    Ok(received_offers)
+}
+
+/// Start listening for offers in background (Real-time via Tauri Events)
+/// Emits "k2://offer-received" event to frontend when offer is received
+#[tauri::command]
+async fn start_listening(topic: String, app_handle: tauri::AppHandle, state: State<'_, AppState>) -> Result<String, String> {
+    use futures_util::StreamExt;
+    use iroh_gossip::api::Event;
+    use tauri::Emitter;
+    
+    println!("[K2] 🎧 Starting real-time listener for topic: {}", topic);
+    
+    // Get node from state
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    
+    // Subscribe to topic with Discovery (Tracker)
+    let topic_id = K2Marketplace::topic_to_id(&topic);
+    println!("[K2] 🔍 Connecting to tracker and peers...");
+    let gossip_topic = node.subscribe_topic_with_discovery(topic_id).await.map_err(|e| e.to_string())?;
+    
+    // Split into sender and receiver
+    let (sender, mut receiver) = gossip_topic.split();
+    
+    // Spawn background task to listen and emit events
+    let topic_clone = topic.clone();
+    tokio::spawn(async move {
+        println!("[K2] 🔊 Listener task started for topic: {}", topic_clone);
+        
+        // Keep sender alive - DO NOT DROP IT
+        let _keep_alive = sender;
+        
+        loop {
+            match receiver.next().await {
+                Some(Ok(event)) => {
+                    println!("[K2] 📬 Event received: {:?}", event);
+                    match event {
+                        Event::Received(msg) => {
+                            println!("[K2] 📨 Message content length: {} bytes", msg.content.len());
+                            // Try to parse as JSON
+                            if let Ok(offer) = serde_json::from_slice::<serde_json::Value>(&msg.content) {
+                                println!("[K2] 📨 Real-time offer received: {:?}", offer);
+                                // Emit event to frontend
+                                let _ = app_handle.emit("k2://offer-received", offer);
+                            } else {
+                                println!("[K2] ⚠️ Failed to parse message as JSON");
+                            }
+                        }
+                        Event::NeighborUp(id) => {
+                            println!("[K2] 🟢 Peer connected: {}", id.to_string());
+                            let _ = app_handle.emit("k2://peer-connected", id.to_string());
+                        }
+                        Event::NeighborDown(id) => {
+                            println!("[K2] 🔴 Peer disconnected: {}", id.to_string());
+                            let _ = app_handle.emit("k2://peer-disconnected", id.to_string());
+                        }
+                        other => {
+                            println!("[K2] 📭 Other event: {:?}", other);
+                        }
+                    }
+                }
+                Some(Err(e)) => {
+                    println!("[K2] ⚠️ Listener error: {}", e);
+                }
+                None => {
+                    println!("[K2] 🔇 Receiver stream closed for topic: {}", topic_clone);
+                    break;
+                }
+            }
+        }
+        
+        println!("[K2] 🔇 Listener task ended for topic: {}", topic_clone);
+    });
+    
+    Ok(format!("Started listening on topic: {}", topic))
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -286,9 +628,14 @@ pub fn run() {
             download_file,
             generate_qr_svg,
             // Marketplace commands
+            classify_intent,
+            classify_k2_endpoint,
             get_broadcast_delay,
             join_topic,
-            broadcast_offer
+            broadcast_offer,
+            send_interest,
+            listen_offers,
+            start_listening
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

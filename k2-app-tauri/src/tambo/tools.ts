@@ -4,116 +4,123 @@
  * Tools để Tambo AI có thể gọi và thực hiện các action
  */
 import { z } from "zod";
-import { extractMarketplaceIntent } from "../services/groqStructuredOutput";
+// import { extractMarketplaceIntent } from "../services/groqStructuredOutput";
 
 /**
  * Alternative marketplace intent extraction using K2 DigitalOcean endpoint
  */
-async function extractMarketplaceIntentK2(userPrompt: string) {
-    console.log("🔍 [K2-DO] Calling classify endpoint...");
-    console.log("🔍 [K2-DO] Input text:", userPrompt);
+/**
+ * Alternative marketplace intent extraction using K2 DigitalOcean endpoint
+ * UPDATED: Uses Tauri backend to bypass SSL cert errors
+ */
+async function extractMarketplaceIntentK2(userPrompt: string): Promise<any> {
+    console.log("🔍 [K2-DO] Calling backend classify_k2_endpoint (ignoring SSL)...");
 
-    const encodedText = encodeURIComponent(userPrompt);
-    const url = `https://139.59.125.159/post?user_input=${encodedText}`;
-    console.log("🔍 [K2-DO] URL:", url);
+    // Import Tauri invoke
+    const { invoke } = await import('@tauri-apps/api/core');
 
-    try {
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Accept': 'application/json',
-            }
-        });
+    // Call backend command
+    const rawResult = await invoke<any>('classify_k2_endpoint', {
+        userPrompt
+    });
 
-        console.log("📡 [K2-DO] Response status:", response.status);
-        console.log("📡 [K2-DO] Response headers:", Object.fromEntries(response.headers.entries()));
+    console.log("✅ [K2-DO] Backend returned raw result:", rawResult);
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("❌ [K2-DO] Error response body:", errorText);
-            throw new Error(`K2 API Error: ${response.status} - ${errorText}`);
-        }
-
-        const responseText = await response.text();
-        console.log("📥 [K2-DO] Raw response text (length " + responseText.length + "):", responseText);
-        console.log("📥 [K2-DO] Raw response type:", typeof responseText);
-
-        // Check if response is empty
-        if (!responseText || responseText.trim() === '') {
-            throw new Error('Empty response from K2 API');
-        }
-
-        let data;
+    let data = rawResult;
+    // Handle double-encoded JSON if happens
+    if (typeof data === 'string') {
         try {
-            data = JSON.parse(responseText);
-            console.log("📥 [K2-DO] First JSON parse, data type:", typeof data);
-
-            // Handle double-encoded JSON (server returns string instead of object)
-            if (typeof data === 'string') {
-                console.log("📥 [K2-DO] Data is string, parsing again...");
-                data = JSON.parse(data);
-                console.log("📥 [K2-DO] Second JSON parse, data type:", typeof data);
-            }
-        } catch (parseError) {
-            console.error("❌ [K2-DO] JSON parse error:", parseError);
-            console.error("❌ [K2-DO] Response that failed to parse:", JSON.stringify(responseText));
-            throw new Error(`Invalid JSON response: ${responseText.substring(0, 200)}...`);
+            data = JSON.parse(data);
+        } catch (e) {
+            console.error("Failed to parse string data:", e);
         }
-
-        console.log("📥 [K2-DO] Parsed response:", data);
-
-        // Validate response structure
-        if (!data || typeof data !== 'object' || !data.action || !data.action_type) {
-            throw new Error(`Invalid response structure: ${JSON.stringify(data)}`);
-        }
-
-        // Transform K2 response to match groq format
-        const result = {
-            topic: data.action.topic,
-            selection: data.action.topic === "Freelance Job"
-                ? {
-                    category: data.action.category || "Tech & IT",
-                    skill: data.action.skill || "Web & Mobile Development"
-                }
-                : { subtopic: data.action.subtopic || "Other" },
-            action: data.action_type.toLowerCase(), // "Sell" -> "sell"
-            description: userPrompt
-        };
-
-        console.log("✅ [K2-DO] Transformed result:", result);
-        return result;
-
-    } catch (error) {
-        console.error("🔥 [K2-DO] Detailed error:", error);
-        console.error("🔥 [K2-DO] Error stack:", error instanceof Error ? error.stack : 'No stack trace');
-        throw error;
     }
+
+    // Transform K2 response to match groq format
+    // K2 returns: { action: { topic: "...", ... }, action_type: "Sell" }
+    // or just check if it has the right structure
+    if (!data || (!data.action && !data.topic)) {
+        throw new Error(`Invalid K2 response structure: ${JSON.stringify(data)}`);
+    }
+
+    // If already in correct format (rare but possible if endpoint changes)
+    if (data.topic && data.selection && data.action) {
+        return data;
+    }
+
+    // Map K2 format to App format
+    const actionData = data.action || {};
+    const topic = actionData.topic || "Goods"; // default
+
+    const result = {
+        topic: topic,
+        selection: topic === "Freelance Job"
+            ? {
+                category: actionData.category || "Tech & IT",
+                skill: actionData.skill || "Web & Mobile Development"
+            }
+            : { subtopic: actionData.subtopic || "Other" },
+        action: (data.action_type || "sell").toLowerCase(),
+        description: userPrompt
+    };
+
+    console.log("✨ [K2-DO] Transformed result:", result);
+    return result;
 }
 
 /**
- * Parallel execution of both groq and K2 endpoints
+ * Extract marketplace intent using Tauri backend (no CORS issues)
+ */
+async function extractMarketplaceIntentTauri(userPrompt: string): Promise<any> {
+    console.log("🔧 [Tauri] Calling backend classify_intent...");
+
+    const { invoke } = await import('@tauri-apps/api/core');
+    const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+    const baseUrl = import.meta.env.VITE_GROQ_BASE_URL || 'https://api.groq.com/openai/v1';
+    const model = import.meta.env.VITE_GROQ_SMALL_MODEL || 'llama-3.3-70b-versatile';
+
+    if (!apiKey) {
+        throw new Error('VITE_GROQ_API_KEY is not configured');
+    }
+
+    const result = await invoke<any>('classify_intent', {
+        userPrompt,
+        apiKey,
+        baseUrl,
+        model
+    });
+
+    console.log("✅ [Tauri] Backend result:", result);
+    return result;
+}
+
+/**
+ * Parallel execution: Tauri backend first, then K2 endpoint fallback
  */
 async function extractMarketplaceIntentParallel(userPrompt: string) {
-    console.log("🚀 [Parallel] Starting both extractions...");
+    console.log("🚀 [Parallel] Starting extraction via Tauri backend...");
 
-    const [groqResult, k2Result] = await Promise.allSettled([
-        extractMarketplaceIntent(userPrompt),
-        extractMarketplaceIntentK2(userPrompt)
-    ]);
-
-    // Prioritize K2 result, fallback to groq
-    if (k2Result.status === 'fulfilled') {
-        console.log("✅ [Parallel] Using K2 result");
-        return k2Result.value;
-    } else if (groqResult.status === 'fulfilled') {
-        console.log("⚠️ [Parallel] K2 failed, using groq fallback");
-        console.warn("K2 error:", k2Result.reason);
-        return groqResult.value;
-    } else {
-        console.error("❌ [Parallel] Both endpoints failed");
-        throw new Error("Both classification endpoints failed");
+    // Try Tauri backend first (no CORS)
+    try {
+        const result = await extractMarketplaceIntentTauri(userPrompt);
+        console.log("✅ [Parallel] Using Tauri backend result");
+        return result;
+    } catch (tauriError) {
+        console.warn("⚠️ [Parallel] Tauri backend failed:", tauriError);
     }
+
+    // Fallback to K2 endpoint
+    try {
+        const k2Result = await extractMarketplaceIntentK2(userPrompt);
+        console.log("✅ [Parallel] Using K2 endpoint result");
+        return k2Result;
+    } catch (k2Error) {
+        console.error("❌ [Parallel] K2 endpoint also failed:", k2Error);
+    }
+
+    throw new Error("All classification methods failed");
 }
+
 
 /**
  * Tool: Extract Marketplace Intent

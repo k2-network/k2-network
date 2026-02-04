@@ -6,9 +6,11 @@
  * - Status messages with smooth transitions
  * - Progress bar for matching
  * - Broadcast count display
+ * - Real-time offer reception via Tauri events
  */
 import React, { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import aiAgentIcon from '../../assets/icons/ai-agent-large-dark.svg';
 import './DiscoveryView.css';
 import type { DynamicFormFields } from './types';
@@ -47,6 +49,14 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({
   const [broadcastCount, setBroadcastCount] = useState(0);
   const [statusText, setStatusText] = useState(STATUS_MESSAGES.initializing);
   const [isAnimating, setIsAnimating] = useState(true);
+  const [receivedOffers, setReceivedOffers] = useState<any[]>([]);
+
+  // Debug log for received offers
+  useEffect(() => {
+    if (receivedOffers.length > 0) {
+        console.log('[DiscoveryView] 📨 Total offers received:', receivedOffers.length);
+    }
+  }, [receivedOffers]);
 
   // Get broadcast delay from k2-core (random 1-4s)
   const getBroadcastDelay = useCallback(async (): Promise<number> => {
@@ -96,44 +106,87 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({
       setPhase('searching');
       setStatusText(STATUS_MESSAGES.searching);
       
-      // Determine if this user broadcasts (seller/exchange) or listens (buyer)
-      const shouldBroadcast = formData.action === 'sell' || formData.action === 'exchange';
-      
       // Start broadcast/listen cycle
       const discoveryLoop = async () => {
         let broadcasts = 0;
         let found = 0;
-        
-        while (found === 0) {
-          const delay = await getBroadcastDelay();
-          await new Promise(resolve => setTimeout(resolve, delay));
+        const topic = formData.topic;
+        const shouldBroadcast = formData.action === 'sell' || formData.action === 'exchange';
+
+        // 🎧 ALWAYS START LISTENING (Both Buyer & Seller)
+        // This keeps the P2P connection alive and handles messages
+        console.log(`[DiscoveryView] 🎧 Starting background listener for ${formData.action}...`);
+        const offersReceived: any[] = [];
+        const processedSenderIds = new Set<string>();
+
+        const unlisten = await listen<any>('k2://offer-received', async (event) => {
+          const payload = event.payload;
+          console.log('[DiscoveryView] 📨 Message received:', payload);
           
-          if (shouldBroadcast) {
-            // Broadcast our offer
-            broadcasts++;
-            setBroadcastCount(broadcasts);
-            setProgress(50 + Math.min(broadcasts * 5, 40));
-            
-            try {
-              await invoke('broadcast_offer', { formData });
-            } catch (err) {
-              console.log('[DiscoveryView] Broadcast (mock):', broadcasts);
+          if (!payload || !payload.sender_node_id) return;
+
+          // If I am a BUYER, I look for "offer"
+          if (!shouldBroadcast && payload.message_type === 'offer') {
+             if (!processedSenderIds.has(payload.sender_node_id)) {
+                processedSenderIds.add(payload.sender_node_id);
+                offersReceived.push(payload);
+                setReceivedOffers(prev => [...prev, payload]);
+                setBroadcastCount(offersReceived.length);
+                
+                // ⚡ AUTO-REPLY TO SELLER
+                console.log(`[DiscoveryView] 🤝 Found offer! Sending interest to: ${payload.sender_node_id}`);
+                try {
+                  await invoke('send_interest', { topic, sellerNodeId: payload.sender_node_id, formData });
+                } catch (e) { console.error('Reply failed:', e); }
+             }
+          }
+          
+          // If I am a SELLER, I look for "interest" targeting ME
+          if (shouldBroadcast && payload.message_type === 'interest') {
+             // In a real app, we'd check if target_node_id matches our own
+             console.log(`[DiscoveryView] 💰 A buyer is interested!`);
+             if (!processedSenderIds.has(payload.sender_node_id)) {
+                processedSenderIds.add(payload.sender_node_id);
+                offersReceived.push(payload);
+                setReceivedOffers(prev => [...prev, payload]);
+                setBroadcastCount(offersReceived.length);
+             }
+          }
+        });
+
+        try {
+          // Start background task in Rust
+          await invoke('start_listening', { topic });
+
+          const startTime = Date.now();
+          const maxWait = 45000; // Wait 45s
+
+          while (offersReceived.length === 0 && Date.now() - startTime < maxWait) {
+            const now = Date.now();
+            const elapsed = now - startTime;
+            setProgress(50 + Math.min((elapsed / maxWait) * 45, 45));
+
+            if (shouldBroadcast) {
+               // Seller: Periodic broadcast
+               if (elapsed % 5000 < 500) { // Every ~5s
+                  broadcasts++;
+                  setBroadcastCount(broadcasts);
+                  await invoke('broadcast_offer', { topic, formData });
+                  console.log(`[DiscoveryView] 📡 Broadcast #${broadcasts} sent`);
+               }
             }
-          } else {
-            // Listen for offers (buyer)
-            broadcasts++;
-            setBroadcastCount(broadcasts);
-            setProgress(50 + Math.min(broadcasts * 5, 40));
+            
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
           
-          // Mock: find a match after 3-5 broadcasts
-          if (broadcasts >= 3 + Math.floor(Math.random() * 3)) {
-            found = 1 + Math.floor(Math.random() * 3);
-          }
+          found = offersReceived.length;
+        } finally {
+          unlisten();
         }
         
         return found;
       };
+
 
       const foundCount = await discoveryLoop();
       

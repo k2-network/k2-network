@@ -116,7 +116,7 @@ interface ChatInterfaceProps {
 // Inner component that uses Tambo hooks
 const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, onWidthChange }) => {
   const [showSettings, setShowSettings] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+  const [theme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('k2-chat-theme');
     return (saved as 'dark' | 'light') || 'dark';
   });
@@ -166,8 +166,8 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
                 window.dispatchEvent(new CustomEvent('k2:showDynamicForm', {
                   detail: { data: formData, streaming: false }
                 }));
-              } catch (err) {
-                console.error("Failed to parse form data:", err);
+              } catch (error: any) {
+                console.error("🔴 [ChatInterface] Tambo API Error:", error?.message || error);
               }
             }
           }
