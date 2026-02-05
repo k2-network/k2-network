@@ -22,7 +22,7 @@ export const StartTransactionButton: React.FC<StartTransactionButtonProps> = ({
 }) => {
   const handleClick = () => {
     console.log('🚀 [StartTransactionButton] Starting transaction:', formData);
-    
+
     // Dispatch event to Marketplace to switch to Tab 3 and start discovery
     window.dispatchEvent(new CustomEvent('k2:startDiscovery', {
       detail: { formData }
@@ -36,7 +36,7 @@ export const StartTransactionButton: React.FC<StartTransactionButtonProps> = ({
       </p>
       <button className="start-transaction-btn" onClick={handleClick}>
         <IoRocketOutline className="btn-icon" />
-        <span>Bắt đầu giao dịch</span>
+        <span>Bắt đầu đàm phán</span>
       </button>
     </div>
   );

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import "./Marketplace.css";
-import { MarketplaceTabs, DynamicRequestForm, SkeletonForm, DiscoveryView } from "../../components/DynamicForm";
-import type { TabType } from "../../components/DynamicForm";
+import { MarketplaceTabs, DynamicRequestForm, SkeletonForm, DiscoveryView, NegotiationDashboard } from "../../components/DynamicForm";
+import type { TabType, Candidate } from "../../components/DynamicForm";
 import type { DynamicFormFields } from "../../components/DynamicForm";
 // Digital Digital Assets Icons
 import videoIcon from "../../assets/icons/video.svg";
@@ -129,6 +129,7 @@ export function MarketplacePage() {
     const [formData, setFormData] = useState<Partial<DynamicFormFields> | null>(null);
     const [isFormStreaming, setIsFormStreaming] = useState(false);
     const [discoveryFormData, setDiscoveryFormData] = useState<DynamicFormFields | null>(null);
+    const [negotiationCandidates, setNegotiationCandidates] = useState<Candidate[]>([]);
 
     // Listen for form data from AI chat (via custom event or context)
     useEffect(() => {
@@ -164,6 +165,22 @@ export function MarketplacePage() {
     const handleFormCancel = () => {
         setFormData(null);
         setActiveTab('discover');
+    };
+
+    // Handle start negotiation from DiscoveryView
+    const handleStartNegotiation = (candidates: Candidate[]) => {
+        console.log("🤝 [Marketplace] Starting negotiation with candidates:", candidates);
+        setNegotiationCandidates(candidates);
+        setActiveTab('negotiation');
+    };
+
+    // Handle negotiation complete
+    const handleNegotiationComplete = (results: Candidate[]) => {
+        console.log("✅ [Marketplace] Negotiation complete:", results);
+        // Dispatch event to chat for summary message
+        window.dispatchEvent(new CustomEvent('k2:negotiationComplete', {
+            detail: { candidates: results, formData: discoveryFormData }
+        }));
     };
 
     return (
@@ -249,16 +266,33 @@ export function MarketplacePage() {
                         </div>
                     )}
                 </div>
-            ) : (
+            ) : activeTab === 'finding' ? (
                 /* Finding Match Tab */
                 <div className="finding-match-tab">
                     <DiscoveryView
                         formData={discoveryFormData}
-                        onMatchFound={(count) => {
+                        onMatchFound={(count, candidates) => {
                             console.log(`🎯 [Marketplace] Found ${count} matches`);
+                            // Store candidates for potential negotiation
+                            if (candidates && candidates.length > 0) {
+                                setNegotiationCandidates(candidates);
+                            }
                         }}
+                        onStartNegotiation={handleStartNegotiation}
                         onCancel={() => {
                             setActiveTab('create');
+                        }}
+                    />
+                </div>
+            ) : (
+                /* Negotiation Tab */
+                <div className="negotiation-tab">
+                    <NegotiationDashboard
+                        candidates={negotiationCandidates}
+                        formData={discoveryFormData}
+                        onComplete={handleNegotiationComplete}
+                        onBack={() => {
+                            setActiveTab('finding');
                         }}
                     />
                 </div>

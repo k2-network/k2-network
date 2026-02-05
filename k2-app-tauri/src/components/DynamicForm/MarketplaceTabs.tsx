@@ -3,12 +3,13 @@
  * Tab 1: Discover Deals - Browse existing offers
  * Tab 2: Create Request - Dynamic form for creating new requests
  * Tab 3: Finding Match - P2P discovery in progress
+ * Tab 4: Negotiation - AI negotiation dashboard
  */
 import React from 'react';
-import { IoSearch, IoAddCircle, IoRadio } from 'react-icons/io5';
+import { IoSearch, IoAddCircle, IoRadio, IoChatbubbles } from 'react-icons/io5';
 import './DynamicForm.css';
 
-export type TabType = 'discover' | 'create' | 'finding';
+export type TabType = 'discover' | 'create' | 'finding' | 'negotiation';
 
 interface MarketplaceTabsProps {
     activeTab: TabType;
@@ -47,6 +48,15 @@ export const MarketplaceTabs: React.FC<MarketplaceTabsProps> = ({
                     <IoRadio />
                 </span>
                 Finding Match
+            </button>
+            <button
+                className={`form-tab ${activeTab === 'negotiation' ? 'active' : ''}`}
+                onClick={() => onTabChange('negotiation')}
+            >
+                <span className="form-tab-icon">
+                    <IoChatbubbles />
+                </span>
+                Negotiation
             </button>
         </div>
     );

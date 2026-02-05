@@ -5,9 +5,14 @@ export { DynamicRequestForm } from './DynamicRequestForm';
 export { MarketplaceTabs } from './MarketplaceTabs';
 export { SkeletonField, SkeletonForm } from './SkeletonField';
 export { DiscoveryView } from './DiscoveryView';
+export { CandidateCard } from './CandidateCard';
+export { CandidateList } from './CandidateList';
+export { NegotiationDashboard } from './NegotiationDashboard';
 export type {
     TopicType,
     ActionType,
+    CandidateStatus,
+    Candidate,
     DynamicFormFields,
     GoodsFormFields,
     DigitalAssetsFormFields,
@@ -16,4 +21,3 @@ export type {
     DynamicRequestFormProps
 } from './types';
 export type { TabType } from './MarketplaceTabs';
-

@@ -235,3 +235,13 @@
     font-size: 13px;
     font-style: italic;
 }
+
+/* Finding Match Tab */
+.finding-match-tab {
+    padding: 0;
+}
+
+/* Negotiation Tab */
+.negotiation-tab {
+    padding: 0;
+}

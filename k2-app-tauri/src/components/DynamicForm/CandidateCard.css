@@ -1,0 +1,186 @@
+/**
+ * CandidateCard Styles
+ * 
+ * Card design similar to Rent Order reference image
+ * Width: 290px, Gap: 24px
+ */
+
+.candidate-card {
+    width: 290px;
+    padding: 16px;
+    background-color: #1F1F24;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+    border: 2px solid transparent;
+}
+
+.candidate-card:hover {
+    background-color: #2a2a30;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.candidate-card.selected {
+    border-color: #4DA6FF;
+    background-color: rgba(77, 166, 255, 0.08);
+}
+
+/* Header: Rank + Status */
+.candidate-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.candidate-rank {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.candidate-status {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.status-icon {
+    font-size: 10px;
+}
+
+/* Title */
+.candidate-title {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.87);
+    margin: 0 0 8px 0;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    min-height: 38px;
+}
+
+/* Price Range */
+.candidate-price {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: #4DA6FF;
+    margin-bottom: 12px;
+}
+
+/* Match Score Bar */
+.candidate-score-bar {
+    height: 4px;
+    background: #3c3c3c;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-bottom: 16px;
+}
+
+.score-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4DA6FF 0%, #47E069 100%);
+    border-radius: 2px;
+    transition: width 0.5s ease;
+}
+
+/* Footer: Avatar + Name + Action */
+.candidate-footer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.candidate-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.candidate-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.candidate-name {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.87);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.candidate-action {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    color: #858585;
+}
+
+.candidate-action-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #2d2d30;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #858585;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.candidate-action-btn:hover {
+    background: #4DA6FF;
+    color: white;
+}
+
+/* Location Badge */
+.candidate-location {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: none;
+    /* Hidden by default, show via candidate-header */
+    align-items: center;
+    gap: 4px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 500;
+    font-size: 11px;
+    color: #858585;
+    background: #2d2d30;
+    padding: 4px 8px;
+    border-radius: 4px;
+}
+
+.candidate-card:hover .candidate-location {
+    display: flex;
+}

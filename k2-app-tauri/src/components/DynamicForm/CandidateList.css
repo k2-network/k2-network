@@ -1,0 +1,163 @@
+/**
+ * CandidateList Styles
+ */
+
+.candidate-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 0;
+}
+
+/* Header with Search and Action */
+.candidate-list-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.search-container {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #858585;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 12px 10px 40px;
+    background: #1F1F24;
+    border: 1px solid #3c3c3c;
+    border-radius: 8px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.87);
+    outline: none;
+    transition: all 0.2s ease;
+}
+
+.search-input:focus {
+    border-color: #4DA6FF;
+    background: #2a2a30;
+}
+
+.search-input::placeholder {
+    color: #858585;
+}
+
+.start-negotiation-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #4DA6FF 0%, #00A8FF 100%);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 8px rgba(77, 166, 255, 0.3);
+}
+
+.start-negotiation-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(77, 166, 255, 0.4);
+}
+
+.start-negotiation-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.selected-count {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+
+/* Results Info */
+.candidate-list-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+}
+
+.results-count {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.sort-info {
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    color: #858585;
+}
+
+/* Candidates Grid */
+.candidate-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+/* Empty State */
+.candidate-list-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    color: #858585;
+}
+
+.candidate-list-empty p {
+    margin: 16px 0 8px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.candidate-list-empty span {
+    font-family: 'Raleway', sans-serif;
+    font-size: 14px;
+    color: #858585;
+}
+
+/* Responsive */
+@media (max-width: 800px) {
+    .candidate-list-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-container {
+        max-width: none;
+    }
+
+    .start-negotiation-btn {
+        justify-content: center;
+    }
+
+    .candidate-grid {
+        justify-content: center;
+    }
+}

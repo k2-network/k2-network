@@ -4,6 +4,29 @@
 
 export type TopicType = 'Digital Assets' | 'Goods' | 'Freelance Job';
 export type ActionType = 'buy' | 'sell' | 'exchange';
+export type CandidateStatus = 'active' | 'offline' | 'completed';
+
+// Candidate/Match from P2P discovery
+export interface Candidate {
+    nodeId: string;
+    name: string;
+    title: string;
+    action: ActionType;
+    status: CandidateStatus;
+    matchScore: number; // 0-1
+    priceRange: {
+        min: number;
+        max: number;
+        currency: string;
+    };
+    location?: string;
+    topic: TopicType;
+    description?: string;
+    // Negotiation data
+    negotiationScore?: number;
+    aiNotes?: string;
+    lastPingTime?: number;
+}
 
 // Selection types based on topic
 export interface DigitalAssetsSelection {

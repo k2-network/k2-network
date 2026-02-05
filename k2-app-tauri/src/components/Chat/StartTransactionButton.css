@@ -29,12 +29,12 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 12px 24px;
+    padding: 10px 24px;
     background: linear-gradient(135deg, #4DA6FF 0%, #00A8FF 100%);
     border: none;
     border-radius: 8px;
     color: white;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
