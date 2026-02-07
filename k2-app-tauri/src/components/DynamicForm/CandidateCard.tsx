@@ -2,25 +2,19 @@
  * CandidateCard Component
  * 
  * Displays a single candidate/match in the discovery results
- * Similar style to the Rent Order cards in the reference image
+ * Rent Order style cards with price range visualization
  */
 import React from 'react';
+import { IoFlash, IoCheckmarkCircle, IoEllipseOutline, IoLocationSharp, IoChevronForward } from 'react-icons/io5';
 import type { Candidate } from './types';
 import './CandidateCard.css';
 
 // Generate consistent color based on name
 const getAvatarColor = (name: string): string => {
     const colors = [
-        '#F15CDD', // Pink
-        '#47E069', // Green
-        '#4DA6FF', // Blue
-        '#FFB84D', // Orange
-        '#FF6B6B', // Red
-        '#9B59B6', // Purple
-        '#1ABC9C', // Teal
-        '#F39C12', // Yellow
+        '#F15CDD', '#47E069', '#4DA6FF', '#FFB84D',
+        '#FF6B6B', '#9B59B6', '#1ABC9C', '#F39C12',
     ];
-
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
         hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -28,39 +22,30 @@ const getAvatarColor = (name: string): string => {
     return colors[Math.abs(hash) % colors.length];
 };
 
-// Get initials from name
 const getInitials = (name: string): string => {
     const parts = name.trim().split(/\s+/);
-    if (parts.length >= 2) {
-        return (parts[0][0] + parts[1][0]).toUpperCase();
-    }
+    if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
     return name.substring(0, 2).toUpperCase();
 };
 
-// Get action label (danh từ)
 const getActionLabel = (action: string): string => {
     switch (action.toLowerCase()) {
-        case 'buy':
-            return 'Buyer';
-        case 'sell':
-            return 'Seller';
-        case 'exchange':
-            return 'Exchanger';
-        default:
-            return action;
+        case 'buy': return 'Buyer';
+        case 'sell': return 'Seller';
+        case 'exchange': return 'Exchanger';
+        default: return action;
     }
 };
 
-// Get status color and icon
-const getStatusStyle = (status: Candidate['status']): { color: string; bgColor: string; icon: string } => {
+const getStatusConfig = (status: Candidate['status']) => {
     switch (status) {
         case 'active':
-            return { color: '#47E069', bgColor: 'rgba(71, 224, 105, 0.15)', icon: '⚡' };
+            return { color: '#47E069', bgColor: 'transparent', label: 'Active', Icon: IoFlash };
         case 'completed':
-            return { color: '#4DA6FF', bgColor: 'rgba(77, 166, 255, 0.15)', icon: '✓' };
+            return { color: '#4DA6FF', bgColor: 'transparent', label: 'Completed', Icon: IoCheckmarkCircle };
         case 'offline':
         default:
-            return { color: '#858585', bgColor: 'rgba(133, 133, 133, 0.15)', icon: '○' };
+            return { color: '#858585', bgColor: 'transparent', label: 'Offline', Icon: IoEllipseOutline };
     }
 };
 
@@ -69,80 +54,90 @@ interface CandidateCardProps {
     rank: number;
     onClick?: (candidate: Candidate) => void;
     selected?: boolean;
+    userPriceRange?: { min: number; max: number; currency: string };
 }
 
 export const CandidateCard: React.FC<CandidateCardProps> = ({
     candidate,
     rank,
     onClick,
-    selected = false
+    selected = false,
+    userPriceRange,
 }) => {
     const avatarColor = getAvatarColor(candidate.name);
     const initials = getInitials(candidate.name);
     const actionLabel = getActionLabel(candidate.action);
-    const statusStyle = getStatusStyle(candidate.status);
+    const status = getStatusConfig(candidate.status);
 
-    // Format price range
-    const formatPrice = (min: number, max: number, currency: string) => {
-        const formatter = new Intl.NumberFormat('en-US', {
-            style: 'currency',
-            currency: currency,
-            minimumFractionDigits: 0,
-            maximumFractionDigits: 0
-        });
-
-        if (min === max) {
-            return formatter.format(min);
-        }
-        return `${formatter.format(min)} - ${formatter.format(max)}`;
+    const formatPrice = (value: number, currency: string) => {
+        return new Intl.NumberFormat('en-US', {
+            style: 'currency', currency, minimumFractionDigits: 0, maximumFractionDigits: 0
+        }).format(value);
     };
+
+    // Price range visualization:
+    // The full bar = user's price range (gray)
+    // The filled portion = candidate's price range overlaid (white)
+    const userMin = userPriceRange?.min ?? candidate.priceRange.min;
+    const userMax = userPriceRange?.max ?? candidate.priceRange.max;
+    const currency = candidate.priceRange.currency;
+
+    // Calculate candidate range position within user range
+    const rangeSpan = userMax - userMin || 1;
+    const candLeftPct = Math.max(0, Math.min(100, ((candidate.priceRange.min - userMin) / rangeSpan) * 100));
+    const candRightPct = Math.max(0, Math.min(100, ((candidate.priceRange.max - userMin) / rangeSpan) * 100));
 
     return (
         <div
-            className={`candidate-card ${selected ? 'selected' : ''}`}
+            className={`candidate-card ${selected ? 'selected' : ''} status-${candidate.status}`}
             onClick={() => onClick?.(candidate)}
         >
-            {/* Header: Rank + Status */}
+            {/* Header: #rank | status ... location */}
             <div className="candidate-header">
-                <span className="candidate-rank">#{rank}</span>
-                <span
-                    className="candidate-status"
-                    style={{
-                        color: statusStyle.color,
-                        backgroundColor: statusStyle.bgColor
-                    }}
-                >
-                    <span className="status-icon">{statusStyle.icon}</span>
-                    {candidate.status.charAt(0).toUpperCase() + candidate.status.slice(1)}
-                </span>
+                <div className="candidate-header-left">
+                    <span className="candidate-rank">#{rank}</span>
+                    <span className="header-divider">|</span>
+                    <span
+                        className="candidate-status"
+                        style={{ color: status.color, backgroundColor: status.bgColor }}
+                    >
+                        <status.Icon className="status-icon" />
+                        {status.label}
+                    </span>
+                </div>
+                {candidate.location && (
+                    <div className="candidate-location">
+                        <IoLocationSharp size={12} />
+                        {candidate.location}
+                    </div>
+                )}
             </div>
 
             {/* Title */}
             <h4 className="candidate-title">{candidate.title}</h4>
 
-            {/* Price Range */}
-            <div className="candidate-price">
-                {formatPrice(
-                    candidate.priceRange.min,
-                    candidate.priceRange.max,
-                    candidate.priceRange.currency
-                )}
-            </div>
-
-            {/* Match Score Bar */}
-            <div className="candidate-score-bar">
-                <div
-                    className="score-fill"
-                    style={{ width: `${candidate.matchScore * 100}%` }}
-                />
+            {/* Price Range Visualization */}
+            <div className="price-range-section">
+                <div className="price-range-labels">
+                    <span className="price-label-min">{formatPrice(userMin, currency)}</span>
+                    <span className="price-label-max">{formatPrice(userMax, currency)}</span>
+                </div>
+                <div className="price-range-track">
+                    {/* Candidate's range overlay */}
+                    <div
+                        className="price-range-fill"
+                        style={{ left: `${candLeftPct}%`, width: `${candRightPct - candLeftPct}%` }}
+                    />
+                    {/* Left endpoint circle */}
+                    <div className="price-endpoint price-endpoint-left" style={{ left: `${candLeftPct}%` }} />
+                    {/* Right endpoint circle */}
+                    <div className="price-endpoint price-endpoint-right" style={{ left: `${candRightPct}%` }} />
+                </div>
             </div>
 
             {/* Footer: Avatar + Name + Action */}
             <div className="candidate-footer">
-                <div
-                    className="candidate-avatar"
-                    style={{ backgroundColor: avatarColor }}
-                >
+                <div className="candidate-avatar" style={{ backgroundColor: avatarColor }}>
                     {initials}
                 </div>
                 <div className="candidate-info">
@@ -151,26 +146,11 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
                 </div>
                 <button
                     className="candidate-action-btn"
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onClick?.(candidate);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); onClick?.(candidate); }}
                 >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6-1.41-1.41z" />
-                    </svg>
+                    <IoChevronForward size={20} />
                 </button>
             </div>
-
-            {/* Location badge (if available) */}
-            {candidate.location && (
-                <div className="candidate-location">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-                    </svg>
-                    {candidate.location}
-                </div>
-            )}
         </div>
     );
 };

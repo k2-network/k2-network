@@ -69,7 +69,7 @@
     color: white;
     cursor: pointer;
     transition: all 0.2s ease;
-    box-shadow: 0 2px 8px rgba(77, 166, 255, 0.3);
+    /* box-shadow: 0 2px 8px rgba(77, 166, 255, 0.3); */
 }
 
 .start-negotiation-btn:hover:not(:disabled) {

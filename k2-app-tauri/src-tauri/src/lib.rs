@@ -1,24 +1,48 @@
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::collections::HashMap;
 use tauri::State;
 use tauri::Manager;
-use k2_core::{K2Node, Contact, ContactBook, K2Marketplace};
+use k2_core::{K2Node, Contact, K2Marketplace, ContactBookDocs};
 use qrcode::QrCode;
 use qrcode::render::svg;
 #[cfg(not(target_os = "android"))]
 use directories::UserDirs;
+use tokio::sync::{RwLock, mpsc};
+use std::sync::Arc;
 
-/// App State - holds the K2Node instance and ContactBook
+/// App State - holds the K2Node instance and ContactBookDocs (iroh-docs)
 pub struct AppState {
     pub node: Mutex<Option<K2Node>>,
-    pub contacts: Mutex<ContactBook>,
-    pub contacts_path: Mutex<Option<PathBuf>>,
+    pub contacts: Arc<RwLock<Option<ContactBookDocs>>>,
+    /// Topic senders - for broadcasting on topics we've joined (like example 12)
+    pub topic_senders: Arc<RwLock<HashMap<String, mpsc::UnboundedSender<Vec<u8>>>>>,
 }
 
 /// Initialize the K2 P2P Node
 #[tauri::command]
-async fn init_node(state: State<'_, AppState>, app: tauri::AppHandle) -> Result<String, String> {
-    let node = K2Node::new().await.map_err(|e| e.to_string())?;
+async fn init_node(state: State<'_, AppState>, _app: tauri::AppHandle) -> Result<String, String> {
+    // Guard: Check if node is already initialized
+    {
+        let guard = state.node.lock().unwrap();
+        if let Some(ref existing_node) = *guard {
+            let node_id = existing_node.my_id();
+            let short_id = if node_id.len() > 10 {
+                format!("{}...", &node_id[..10])
+            } else {
+                node_id
+            };
+            println!("[K2] ✅ Node already initialized, returning existing: {}", short_id);
+            return Ok(short_id);
+        }
+    }
+    
+    println!("[K2] 🚀 Initializing new node (in-memory)...");
+    
+    let node = K2Node::new().await.map_err(|e| {
+        println!("[K2] ❌ Failed to create K2Node: {:?}", e);
+        e.to_string()
+    })?;
     let node_id = node.my_id();
     
     // Shorten for display
@@ -28,24 +52,27 @@ async fn init_node(state: State<'_, AppState>, app: tauri::AppHandle) -> Result<
         node_id.clone()
     };
     
+    // Initialize ContactBookDocs from iroh-docs
+    let mut contact_book = node.contact_book();
+    contact_book.init().await.map_err(|e| {
+        println!("[K2] ❌ Failed to init contacts: {:?}", e);
+        format!("Failed to init contacts: {}", e)
+    })?;
+    println!("[K2] 📚 ContactBookDocs initialized (iroh-docs, persistent)");
+    
+    // Store in state
+    {
+        let mut contacts_guard = state.contacts.write().await;
+        *contacts_guard = Some(contact_book);
+    }
+    
     // Store node in state
     {
         let mut state_node = state.node.lock().unwrap();
         *state_node = Some(node);
     }
     
-    // Load contacts from app data directory
-    if let Ok(app_data_dir) = app.path().app_data_dir() {
-        let contacts_file = app_data_dir.join("contacts.json");
-        let loaded_contacts = ContactBook::load(&contacts_file).unwrap_or_default();
-        
-        let mut contacts = state.contacts.lock().unwrap();
-        *contacts = loaded_contacts;
-        
-        let mut path = state.contacts_path.lock().unwrap();
-        *path = Some(contacts_file);
-    }
-    
+    println!("[K2] ✅ Node initialized successfully: {}", short_id);
     Ok(short_id)
 }
 
@@ -59,7 +86,7 @@ async fn get_my_node_id(state: State<'_, AppState>) -> Result<String, String> {
     Ok(node.my_id())
 }
 
-// ============ CONTACT BOOK COMMANDS ============
+// ============ CONTACT BOOK COMMANDS (iroh-docs) ============
 
 /// Add a new contact
 #[tauri::command]
@@ -69,24 +96,24 @@ async fn add_contact(
     notes: Option<String>,
     state: State<'_, AppState>
 ) -> Result<Contact, String> {
-    let contact = {
-        let mut contacts = state.contacts.lock().unwrap();
-        contacts.add(node_id, nickname, notes)
-    };
-    save_contacts(&state)?;
+    let contacts_guard = state.contacts.read().await;
+    let contact_book = contacts_guard.as_ref().ok_or("Contacts not initialized")?;
+    
+    let contact = contact_book.add(node_id, nickname, notes).await
+        .map_err(|e| format!("Failed to add contact: {}", e))?;
+    
     Ok(contact)
 }
 
 /// Remove a contact
 #[tauri::command]
 async fn remove_contact(node_id: String, state: State<'_, AppState>) -> Result<bool, String> {
-    let removed = {
-        let mut contacts = state.contacts.lock().unwrap();
-        contacts.remove(&node_id)
-    };
-    if removed {
-        save_contacts(&state)?;
-    }
+    let contacts_guard = state.contacts.read().await;
+    let contact_book = contacts_guard.as_ref().ok_or("Contacts not initialized")?;
+    
+    let removed = contact_book.remove(&node_id).await
+        .map_err(|e| format!("Failed to remove contact: {}", e))?;
+    
     Ok(removed)
 }
 
@@ -97,21 +124,25 @@ async fn update_contact_nickname(
     nickname: String,
     state: State<'_, AppState>
 ) -> Result<bool, String> {
-    let updated = {
-        let mut contacts = state.contacts.lock().unwrap();
-        contacts.update_nickname(&node_id, nickname)
-    };
-    if updated {
-        save_contacts(&state)?;
-    }
+    let contacts_guard = state.contacts.read().await;
+    let contact_book = contacts_guard.as_ref().ok_or("Contacts not initialized")?;
+    
+    let updated = contact_book.update_nickname(&node_id, nickname).await
+        .map_err(|e| format!("Failed to update nickname: {}", e))?;
+    
     Ok(updated)
 }
 
 /// List all contacts
 #[tauri::command]
 async fn list_contacts(state: State<'_, AppState>) -> Result<Vec<Contact>, String> {
-    let contacts = state.contacts.lock().unwrap();
-    Ok(contacts.list().into_iter().cloned().collect())
+    let contacts_guard = state.contacts.read().await;
+    let contact_book = contacts_guard.as_ref().ok_or("Contacts not initialized")?;
+    
+    let contacts = contact_book.list().await
+        .map_err(|e| format!("Failed to list contacts: {}", e))?;
+    
+    Ok(contacts)
 }
 
 /// Connect to a contact and check if they're online (ping with timeout)
@@ -128,15 +159,128 @@ async fn ping_contact(node_id: String, state: State<'_, AppState>) -> Result<boo
     }
 }
 
-/// Helper to save contacts to disk
-fn save_contacts(state: &State<'_, AppState>) -> Result<(), String> {
-    let contacts = state.contacts.lock().unwrap();
-    let path_guard = state.contacts_path.lock().unwrap();
+/// Send a direct chat message to a contact via P2P
+#[tauri::command]
+async fn send_chat_message(
+    recipient_node_id: String,
+    content: String,
+    state: State<'_, AppState>,
+    _app: tauri::AppHandle,
+) -> Result<bool, String> {
+    println!("[K2] 💬 Sending chat message to: {}", recipient_node_id);
     
-    if let Some(path) = path_guard.as_ref() {
-        contacts.save(path).map_err(|e| e.to_string())?;
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    
+    let my_node_id = node.my_id();
+    
+    // Build chat message payload
+    let payload = serde_json::json!({
+        "type": "chat_message",
+        "sender_node_id": my_node_id,
+        "content": content,
+        "timestamp": std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_millis() as u64
+    });
+    
+    // Use a special topic for direct messages (hash of both node IDs sorted)
+    let mut ids = vec![my_node_id.clone(), recipient_node_id.clone()];
+    ids.sort();
+    let dm_topic = format!("dm:{}-{}", ids[0], ids[1]);
+    let topic_id = K2Marketplace::topic_to_id(&dm_topic);
+    
+    // Broadcast to the DM topic
+    let message = serde_json::to_vec(&payload).map_err(|e| e.to_string())?;
+    
+    match node.broadcast_message(topic_id, message).await {
+        Ok(_) => {
+            println!("[K2] ✅ Chat message sent to {}", recipient_node_id);
+            Ok(true)
+        }
+        Err(e) => {
+            println!("[K2] ❌ Failed to send chat message: {}", e);
+            Err(format!("Failed to send message: {}", e))
+        }
     }
-    Ok(())
+}
+
+/// Start listening for direct messages from contacts
+#[tauri::command]
+async fn start_dm_listener(
+    contact_node_id: String,
+    state: State<'_, AppState>,
+    app: tauri::AppHandle,
+) -> Result<String, String> {
+    use futures_util::StreamExt;
+    use iroh_gossip::api::Event;
+    use tauri::Emitter;
+    
+    println!("[K2] 🎧 Starting DM listener for: {}", contact_node_id);
+    
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    
+    let my_node_id = node.my_id();
+    
+    // Create DM topic (same as send_chat_message)
+    let mut ids = vec![my_node_id.clone(), contact_node_id.clone()];
+    ids.sort();
+    let dm_topic = format!("dm:{}-{}", ids[0], ids[1]);
+    let topic_id = K2Marketplace::topic_to_id(&dm_topic);
+    
+    // Subscribe to DM topic
+    let gossip_topic = node.subscribe_topic_with_discovery(topic_id).await
+        .map_err(|e| format!("Failed to subscribe to DM topic: {}", e))?;
+    
+    // Split into sender and receiver
+    let (sender, mut receiver) = gossip_topic.split();
+    
+    let app_handle = app.clone();
+    let my_id = my_node_id.clone();
+    let dm_topic_clone = dm_topic.clone();
+    
+    // Spawn background listener
+    tokio::spawn(async move {
+        println!("[K2] 🎧 DM Listener started for topic: {}", dm_topic_clone);
+        
+        // Keep sender alive
+        let _keep_alive = sender;
+        
+        loop {
+            match receiver.next().await {
+                Some(Ok(event)) => {
+                    if let Event::Received(msg) = event {
+                        if let Ok(payload) = serde_json::from_slice::<serde_json::Value>(&msg.content) {
+                            // Skip messages from self
+                            if let Some(sender_id) = payload.get("sender_node_id").and_then(|v| v.as_str()) {
+                                if sender_id != my_id {
+                                    println!("[K2] 📨 Received DM: {:?}", payload);
+                                    let _ = app_handle.emit("k2://chat-message", &payload);
+                                }
+                            }
+                        }
+                    }
+                }
+                Some(Err(e)) => {
+                    println!("[K2] ⚠️ DM Listener error: {}", e);
+                }
+                None => {
+                    println!("[K2] 🔇 DM Listener stream closed for: {}", dm_topic_clone);
+                    break;
+                }
+            }
+        }
+        
+        println!("[K2] 🔇 DM Listener ended for: {}", dm_topic_clone);
+    });
+    
+    Ok(format!("Started DM listener with: {}", contact_node_id))
 }
 
 // ============ FILE SHARING COMMANDS ============
@@ -364,11 +508,12 @@ async fn classify_k2_endpoint(user_prompt: String) -> Result<serde_json::Value, 
 }
 
 /// Message includes sender's nodeId so buyers can respond
+/// Uses stored sender channel from start_listening (like example 12)
 #[tauri::command]
 async fn broadcast_offer(topic: String, form_data: serde_json::Value, state: State<'_, AppState>) -> Result<String, String> {
     println!("[K2] 📡 Broadcasting offer to topic: {}", topic);
     
-    // Get node from state
+    // Get node from state (for node ID)
     let node = {
         let guard = state.node.lock().unwrap();
         guard.clone().ok_or("Node not initialized")?
@@ -394,28 +539,36 @@ async fn broadcast_offer(topic: String, form_data: serde_json::Value, state: Sta
     let message = serde_json::to_vec(&payload).map_err(|e| e.to_string())?;
     println!("[K2] 📦 Payload with nodeId: {:?}", my_node_id);
     
-    // Convert topic and broadcast via iroh-gossip
-    let topic_id = K2Marketplace::topic_to_id(&topic);
-    match node.broadcast_message(topic_id, message).await {
-        Ok(_) => {
-            let offer_id = K2Marketplace::generate_id();
-            println!("[K2] ✅ Offer broadcast successfully: {}", offer_id);
-            Ok(format!("Offer broadcast: {}", offer_id))
+    // Get sender channel from AppState (created by start_listening)
+    let sender = {
+        let senders = state.topic_senders.read().await;
+        senders.get(&topic).cloned()
+    };
+    
+    match sender {
+        Some(tx) => {
+            // Send through channel → forwarder task → sender.broadcast (like example 12)
+            tx.send(message).map_err(|e| format!("Channel send failed: {}", e))?;
+            // Generate unique ID for this offer
+            let id = K2Marketplace::generate_id();
+            println!("[K2] ✅ Offer ID generated: {}", id);
+            Ok(format!("Offer broadcast: {}", id))
         }
-        Err(e) => {
-            println!("[K2] ❌ Broadcast failed: {}", e);
-            Err(format!("Broadcast failed: {}", e))
+        None => {
+            println!("[K2] ❌ No sender channel for topic: {} - call start_listening first!", topic);
+            Err(format!("Not listening on topic: {}. Call start_listening first.", topic))
         }
     }
 }
 
 /// Send interest response to a seller (Buyer -> Seller)
 /// Broadcasts on same topic with message_type="interest"
+/// Uses stored sender channel from start_listening (like example 12)
 #[tauri::command]
 async fn send_interest(topic: String, seller_node_id: String, form_data: serde_json::Value, state: State<'_, AppState>) -> Result<String, String> {
     println!("[K2] 💰 Sending interest to seller: {}", seller_node_id);
     
-    // Get node from state
+    // Get node from state (for node ID)
     let node = {
         let guard = state.node.lock().unwrap();
         guard.clone().ok_or("Node not initialized")?
@@ -442,16 +595,22 @@ async fn send_interest(topic: String, seller_node_id: String, form_data: serde_j
     let message = serde_json::to_vec(&payload).map_err(|e| e.to_string())?;
     println!("[K2] 📦 Interest from {} to {}", my_node_id, seller_node_id);
     
-    // Broadcast interest on same topic
-    let topic_id = K2Marketplace::topic_to_id(&topic);
-    match node.broadcast_message(topic_id, message).await {
-        Ok(_) => {
-            println!("[K2] ✅ Interest sent successfully");
+    // Get sender channel from AppState (created by start_listening)
+    let sender = {
+        let senders = state.topic_senders.read().await;
+        senders.get(&topic).cloned()
+    };
+    
+    match sender {
+        Some(tx) => {
+            // Send through channel → forwarder task → sender.broadcast (like example 12)
+            tx.send(message).map_err(|e| format!("Channel send failed: {}", e))?;
+            println!("[K2] ✅ Interest sent via channel");
             Ok(format!("Interest sent to {}", seller_node_id))
         }
-        Err(e) => {
-            println!("[K2] ❌ Interest send failed: {}", e);
-            Err(format!("Failed to send interest: {}", e))
+        None => {
+            println!("[K2] ❌ No sender channel for topic: {} - call start_listening first!", topic);
+            Err(format!("Not listening on topic: {}. Call start_listening first.", topic))
         }
     }
 }
@@ -520,6 +679,7 @@ async fn listen_offers(topic: String, timeout_secs: u64, state: State<'_, AppSta
 
 /// Start listening for offers in background (Real-time via Tauri Events)
 /// Emits "k2://offer-received" event to frontend when offer is received
+/// Also stores sender channel in AppState for broadcasting (like example 12)
 #[tauri::command]
 async fn start_listening(topic: String, app_handle: tauri::AppHandle, state: State<'_, AppState>) -> Result<String, String> {
     use futures_util::StreamExt;
@@ -527,6 +687,16 @@ async fn start_listening(topic: String, app_handle: tauri::AppHandle, state: Sta
     use tauri::Emitter;
     
     println!("[K2] 🎧 Starting real-time listener for topic: {}", topic);
+    
+    // Check if already listening - USE WRITE LOCK to prevent race condition
+    {
+        let senders = state.topic_senders.write().await;
+        if senders.contains_key(&topic) {
+            println!("[K2] ✅ Already listening on topic: {}", topic);
+            return Ok(format!("Already listening on topic: {}", topic));
+        }
+        // Lock released here, but we're protected by the check
+    }
     
     // Get node from state
     let node = {
@@ -539,16 +709,48 @@ async fn start_listening(topic: String, app_handle: tauri::AppHandle, state: Sta
     println!("[K2] 🔍 Connecting to tracker and peers...");
     let gossip_topic = node.subscribe_topic_with_discovery(topic_id).await.map_err(|e| e.to_string())?;
     
-    // Split into sender and receiver
+    // Split into sender and receiver (like example 12)
     let (sender, mut receiver) = gossip_topic.split();
+    let sender = Arc::new(sender);
+    
+    // Create channel for outgoing messages (like example 12)
+    let (out_tx, mut out_rx) = mpsc::unbounded_channel::<Vec<u8>>();
+    
+    // Store sender channel in AppState - check again to be safe
+    {
+        let mut senders = state.topic_senders.write().await;
+        if senders.contains_key(&topic) {
+            println!("[K2] ⚠️ Race condition detected, topic already registered: {}", topic);
+            return Ok(format!("Already listening on topic: {}", topic));
+        }
+        senders.insert(topic.clone(), out_tx);
+        println!("[K2] 📤 Stored sender channel for topic: {}", topic);
+    }
+    
+    // Spawn task to forward outgoing messages through sender (like example 12)
+    let s = sender.clone();
+    let topic_for_sender = topic.clone();
+    tokio::spawn(async move {
+        println!("[K2] 📤 Outgoing message forwarder started for: {}", topic_for_sender);
+        while let Some(msg) = out_rx.recv().await {
+            println!("[K2] 📤 Broadcasting {} bytes on topic: {}", msg.len(), topic_for_sender);
+            // broadcast returns Result<()>
+            match s.broadcast(msg.into()).await {
+                Ok(_) => {
+                    println!("[K2] ✅ Broadcast sent successfully");
+                    // Debug info about peers
+                    // This is handled automatically by gossip protocol, but good to know
+                }
+                Err(e) => println!("[K2] ⚠️ Broadcast error: {}", e),
+            }
+        }
+        println!("[K2] 📤 Outgoing forwarder ended for: {}", topic_for_sender);
+    });
     
     // Spawn background task to listen and emit events
     let topic_clone = topic.clone();
     tokio::spawn(async move {
         println!("[K2] 🔊 Listener task started for topic: {}", topic_clone);
-        
-        // Keep sender alive - DO NOT DROP IT
-        let _keep_alive = sender;
         
         loop {
             match receiver.next().await {
@@ -610,8 +812,8 @@ pub fn run() {
         })
         .manage(AppState {
             node: Mutex::new(None),
-            contacts: Mutex::new(ContactBook::default()),
-            contacts_path: Mutex::new(None),
+            contacts: Arc::new(RwLock::new(None)),
+            topic_senders: Arc::new(RwLock::new(HashMap::new())),
         })
         .invoke_handler(tauri::generate_handler![
             init_node,
@@ -622,6 +824,9 @@ pub fn run() {
             update_contact_nickname,
             list_contacts,
             ping_contact,
+            // Chat commands
+            send_chat_message,
+            start_dm_listener,
             // File sharing commands
             share_file,
             share_bytes,

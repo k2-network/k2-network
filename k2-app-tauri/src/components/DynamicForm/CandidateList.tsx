@@ -157,6 +157,7 @@ export const CandidateList: React.FC<CandidateListProps> = ({
                         rank={index + 1}
                         selected={selectedCandidates.has(candidate.nodeId)}
                         onClick={toggleSelection}
+                        userPriceRange={formData?.priceRange}
                     />
                 ))}
             </div>

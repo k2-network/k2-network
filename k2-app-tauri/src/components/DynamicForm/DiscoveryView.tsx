@@ -114,147 +114,183 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({
     }
   }, []);
 
+  // Discovery flow lock
+  const isDiscoveryRunning = React.useRef(false);
+
   // Discovery flow with minimum 2s per phase
   useEffect(() => {
-    if (!formData) return;
+    if (!formData || isDiscoveryRunning.current) return;
+    isDiscoveryRunning.current = true;
 
     const runDiscovery = async () => {
-      // Phase 1: Initializing (min 2s)
-      setPhase('initializing');
-      setStatusText(STATUS_MESSAGES.initializing);
-      setProgress(10);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('[DiscoveryView] 🚀 runDiscovery STARTED for:', formData?.action);
 
-      // Phase 2: Joining topic (min 2s)
-      setPhase('joining');
-      setStatusText(STATUS_MESSAGES.joining);
-      setProgress(30);
-
-      // Actually try to join topic via Tauri
       try {
-        await invoke('join_topic', {
-          topic: formData.topic,
-          action: formData.action
-        });
-      } catch (err) {
-        console.log('[DiscoveryView] Join topic (mock):', err);
-      }
-      await new Promise(resolve => setTimeout(resolve, 2000));
+        // Phase 1: Initializing (min 2s)
+        setPhase('initializing');
+        setStatusText(STATUS_MESSAGES.initializing);
+        setProgress(10);
+        console.log('[DiscoveryView] Phase 1: Initializing...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-      // Phase 3: Joined (min 2s)
-      setPhase('joined');
-      setStatusText(STATUS_MESSAGES.joined);
-      setProgress(50);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+        // Phase 2: Joining topic (min 2s)
+        setPhase('joining');
+        setStatusText(STATUS_MESSAGES.joining);
+        setProgress(30);
+        console.log('[DiscoveryView] Phase 2: Joining topic...');
 
-      // Phase 4: Searching with broadcasts
-      setPhase('searching');
-      setStatusText(STATUS_MESSAGES.searching);
-
-      // Start broadcast/listen cycle
-      const discoveryLoop = async () => {
-        let broadcasts = 0;
-        const topic = formData.topic;
-        const shouldBroadcast = formData.action === 'sell' || formData.action === 'exchange';
-        const collectedCandidates: Candidate[] = [];
-        const processedSenderIds = new Set<string>();
-
-        console.log(`[DiscoveryView] 🎧 Starting background listener for ${formData.action}...`);
-
-        const unlisten = await listen<any>('k2://offer-received', async (event) => {
-          const payload = event.payload;
-          console.log('[DiscoveryView] 📨 Message received:', payload);
-
-          if (!payload || !payload.sender_node_id) return;
-
-          // If I am a BUYER, I look for "offer"
-          if (!shouldBroadcast && payload.message_type === 'offer') {
-            if (!processedSenderIds.has(payload.sender_node_id)) {
-              processedSenderIds.add(payload.sender_node_id);
-              const candidate = payloadToCandidate(payload, collectedCandidates.length, formData.action);
-              collectedCandidates.push(candidate);
-              setCandidates([...collectedCandidates]);
-              setBroadcastCount(collectedCandidates.length);
-
-              // ⚡ AUTO-REPLY TO SELLER
-              console.log(`[DiscoveryView] 🤝 Found offer! Sending interest to: ${payload.sender_node_id}`);
-              try {
-                await invoke('send_interest', { topic, sellerNodeId: payload.sender_node_id, formData });
-              } catch (e) { console.error('Reply failed:', e); }
-            }
-          }
-
-          // If I am a SELLER, I look for "interest" targeting ME
-          if (shouldBroadcast && payload.message_type === 'interest') {
-            console.log(`[DiscoveryView] 💰 A buyer is interested!`);
-            if (!processedSenderIds.has(payload.sender_node_id)) {
-              processedSenderIds.add(payload.sender_node_id);
-              const candidate = payloadToCandidate(payload, collectedCandidates.length, formData.action);
-              collectedCandidates.push(candidate);
-              setCandidates([...collectedCandidates]);
-              setBroadcastCount(collectedCandidates.length);
-            }
-          }
-        });
-
+        // Actually try to join topic via Tauri
         try {
-          // Start background task in Rust
-          await invoke('start_listening', { topic });
+          console.log('[DiscoveryView] invoking join_topic...');
+          await invoke('join_topic', {
+            topic: formData.topic,
+            action: formData.action
+          });
+          console.log('[DiscoveryView] join_topic SUCCESS');
+        } catch (err) {
+          console.error('[DiscoveryView] Join topic FAILED:', err);
+        }
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-          const startTime = Date.now();
-          const maxWait = 30000; // Wait 30s (reduced from 45s)
-          const minCandidates = 1; // Show list when at least 1 found
+        // Phase 3: Joined (min 2s)
+        setPhase('joined');
+        setStatusText(STATUS_MESSAGES.joined);
+        setProgress(50);
+        console.log('[DiscoveryView] Phase 3: Joined...');
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-          while (Date.now() - startTime < maxWait) {
-            const now = Date.now();
-            const elapsed = now - startTime;
-            setProgress(50 + Math.min((elapsed / maxWait) * 45, 45));
+        // Phase 4: Searching with broadcasts
+        setPhase('searching');
+        setStatusText(STATUS_MESSAGES.searching);
 
-            // Show candidate list as soon as we have at least 1
-            if (collectedCandidates.length >= minCandidates && !showCandidateList) {
-              setShowCandidateList(true);
+        // Start broadcast/listen cycle
+        const discoveryLoop = async () => {
+          let broadcasts = 0;
+          const topic = formData.topic;
+          // Normalize action to lowercase to be safe
+          const action = (formData.action || '').toLowerCase();
+          const shouldBroadcast = action === 'sell' || action === 'exchange';
+          const collectedCandidates: Candidate[] = [];
+          const processedSenderIds = new Set<string>();
+
+          console.log(`[DiscoveryView] 🎧 Starting Loop | Action: ${action} | ShouldBroadcast: ${shouldBroadcast}`);
+
+          const unlisten = await listen<any>('k2://offer-received', async (event) => {
+            const payload = event.payload;
+            console.log('[DiscoveryView] 📨 Message received:', payload);
+
+            if (!payload || !payload.sender_node_id) return;
+
+            // Note: Frontend doesn't strictly know "my node ID" here without prop drilling, 
+            // but we can infer from our action + payload content match.
+
+            // If I am a SELLER and I see my OWN offer -> Log expectation
+            if (shouldBroadcast && payload.message_type === 'offer' && payload.form_data?.title === formData.title) {
+              console.log(`[DiscoveryView] 📢 My offer broadcasted successfully. Waiting for buyers on topic: ${formData.topic}`);
+              return;
             }
 
-            if (shouldBroadcast) {
-              // Seller: Periodic broadcast
-              if (elapsed % 5000 < 500) { // Every ~5s
-                broadcasts++;
-                setBroadcastCount(broadcasts);
+            // If I am a BUYER, I look for "offer"
+            if (!shouldBroadcast && payload.message_type === 'offer') {
+              if (!processedSenderIds.has(payload.sender_node_id)) {
+                processedSenderIds.add(payload.sender_node_id);
+                const candidate = payloadToCandidate(payload, collectedCandidates.length, formData.action);
+                collectedCandidates.push(candidate);
+                setCandidates([...collectedCandidates]);
+                setBroadcastCount(collectedCandidates.length);
+
+                // ⚡ AUTO-REPLY TO SELLER
+                console.log(`[DiscoveryView] 🤝 Found offer! Sending interest to: ${payload.sender_node_id}`);
                 try {
-                  await invoke('broadcast_offer', { topic, formData });
-                  console.log(`[DiscoveryView] 📡 Broadcast #${broadcasts} sent`);
-                } catch (e) {
-                  console.log('[DiscoveryView] Broadcast (mock):', e);
-                }
+                  // Tauri auto-converts camelCase to snake_case for Rust
+                  await invoke('send_interest', { topic, sellerNodeId: payload.sender_node_id, formData });
+                } catch (e) { console.error('Reply failed:', e); }
               }
             }
 
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // If I am a SELLER, I look for "interest" targeting ME
+            if (shouldBroadcast && payload.message_type === 'interest') {
+              console.log(`[DiscoveryView] 💰 A buyer is interested!`);
+              if (!processedSenderIds.has(payload.sender_node_id)) {
+                processedSenderIds.add(payload.sender_node_id);
+                const candidate = payloadToCandidate(payload, collectedCandidates.length, formData.action);
+                collectedCandidates.push(candidate);
+                setCandidates([...collectedCandidates]);
+                setBroadcastCount(collectedCandidates.length);
+              }
+            }
+          });
+
+          try {
+            // Start background task in Rust
+            console.log('[DiscoveryView] 🟢 Invoking start_listening...');
+            await invoke('start_listening', { topic });
+
+            const startTime = Date.now();
+            const maxWait = 30000; // Wait 30s total
+            const broadcastInterval = 5000; // 5 seconds per cycle
+            const minCandidates = 1;
+
+            // Force initial broadcast immediately if needed
+            let nextBroadcastTime = 0;
+
+            while (Date.now() - startTime < maxWait) {
+              const now = Date.now();
+              const elapsed = now - startTime;
+
+              // Progress bar
+              const cycleElapsed = elapsed % broadcastInterval;
+              const cycleProgress = (cycleElapsed / broadcastInterval) * 100;
+              setProgress(cycleProgress);
+
+              // Show candidate list as soon as we have at least 1
+              if (collectedCandidates.length >= minCandidates && !showCandidateList) {
+                setShowCandidateList(true);
+              }
+
+              // Broadcast logic
+              if (shouldBroadcast && now >= nextBroadcastTime) {
+                nextBroadcastTime = now + broadcastInterval;
+                broadcasts++;
+                setBroadcastCount(broadcasts);
+
+                console.log(`[DiscoveryView] 📡 Attempting broadcast #${broadcasts}...`);
+                try {
+                  // Tauri auto-converts camelCase to snake_case for Rust
+                  await invoke('broadcast_offer', { topic, formData });
+                  // Simulate echo for Seller Expectation immediately
+                  console.log(`[DiscoveryView] 📢 My offer sent to network. Waiting for buyers on topic: ${formData.topic}`);
+
+                } catch (e) {
+                  console.log('[DiscoveryView] ❌ Broadcast invoke failed:', e);
+                }
+              }
+
+              await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+          } catch (err) {
+            console.error('[DiscoveryView] Error in discovery loop:', err);
+          } finally {
+            unlisten();
           }
 
-        } finally {
-          unlisten();
-        }
+          console.log(`[DiscoveryView] Discovery complete. Found ${collectedCandidates.length} real P2P candidates.`);
+          return collectedCandidates;
+        };
 
-        // NO MOCK - Show real P2P results only
-        // If no candidates found, user will see "0 matches found"
-        console.log(`[DiscoveryView] Discovery complete. Found ${collectedCandidates.length} real P2P candidates.`);
+        const foundCandidates = await discoveryLoop();
 
-        return collectedCandidates;
-      };
+        // Phase 5: Found matches
+        setPhase('found');
+        setMatchCount(foundCandidates.length);
+        setStatusText(STATUS_MESSAGES.found.replace('{count}', String(foundCandidates.length)));
+        setProgress(100);
+        setIsAnimating(false);
+        setShowCandidateList(true);
 
-      const foundCandidates = await discoveryLoop();
-
-      // Phase 5: Found matches
-      setPhase('found');
-      setMatchCount(foundCandidates.length);
-      setStatusText(STATUS_MESSAGES.found.replace('{count}', String(foundCandidates.length)));
-      setProgress(100);
-      setIsAnimating(false);
-      setShowCandidateList(true);
-
-      if (onMatchFound) {
-        onMatchFound(foundCandidates.length, foundCandidates);
+      } catch (err) {
+        console.error('[DiscoveryView] Error in runDiscovery:', err);
       }
     };
 
@@ -281,29 +317,39 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({
     return (
       <div className="discovery-view discovery-with-results">
         {/* Compact Status Header */}
+        {/* Compact Status Header - Minimalist Style */}
         <div className="discovery-compact-header">
-          <div className="compact-status">
-            <div className="compact-icon">
-              <img src={aiAgentIcon} alt="AI Agent" />
+          <div className="compact-left">
+            <div className={`compact-indicator ${phase === 'found' ? 'success' : 'pulsing'}`}>
+              <div className="indicator-dot" />
+              {phase !== 'found' && <div className="indicator-ping" />}
             </div>
-            <div className="compact-info">
-              <span className="compact-title">
-                {phase === 'found'
-                  ? `Found ${candidates.length} matches`
-                  : 'Still searching...'}
+            <div className="compact-status-text">
+              <span className="status-primary">
+                {phase === 'found' ? 'Discovery Complete' : 'Scanning Network'}
               </span>
-              <span className="compact-subtitle">
-                {formData.action === 'buy' ? 'Listening' : 'Broadcasting'}: {broadcastCount}
+              <span className="status-separator">•</span>
+              <span className="status-secondary">
+                {phase === 'found'
+                  ? `${candidates.length} candidates found`
+                  : 'Searching for peers...'}
               </span>
             </div>
           </div>
 
+          <div className="compact-right">
+            <div className="compact-metric">
+              <span className="metric-label">
+                {formData.action === 'buy' ? 'Listening' : 'Broadcasts'}:
+              </span>
+              <span className="metric-value">{broadcastCount}</span>
+            </div>
+          </div>
+
+          {/* Slim Progress Line at Bottom - CSS animated */}
           {phase !== 'found' && (
-            <div className="compact-progress">
-              <div
-                className="compact-progress-fill"
-                style={{ width: `${progress}%` }}
-              />
+            <div className="compact-progress-line">
+              <div className="compact-progress-fill" />
             </div>
           )}
         </div>

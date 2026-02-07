@@ -292,71 +292,145 @@
     align-items: stretch;
 }
 
-/* Compact Status Header */
+/* Compact Status Header - Minimalist Bar */
 .discovery-compact-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
-    background: #2d2d30;
-    border-radius: 12px;
+    padding: 0 16px;
+    height: 48px;
+    background: #25252b;
+    border-radius: 8px;
     margin-bottom: 24px;
-    gap: 16px;
+    position: relative;
+    overflow: hidden;
+    /* Clean look */
+    border: 1px solid #3c3c3c;
 }
 
-.compact-status {
+.compact-left {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
-.compact-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, rgba(77, 166, 255, 0.2) 0%, rgba(0, 200, 255, 0.1) 100%);
+/* Status Indicator (Dot + Ping) */
+.compact-indicator {
+    position: relative;
+    width: 10px;
+    height: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex-shrink: 0;
 }
 
-.compact-icon img {
-    width: 28px;
-    height: 28px;
+.indicator-dot {
+    width: 8px;
+    height: 8px;
+    background: #4DA6FF;
+    border-radius: 50%;
+    z-index: 2;
 }
 
-.compact-info {
+.compact-indicator.success .indicator-dot {
+    background: #47E069;
+}
+
+.indicator-ping {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: rgba(77, 166, 255, 0.4);
+    border-radius: 50%;
+    opacity: 0;
+    animation: indicatorPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes indicatorPing {
+    0% {
+        transform: scale(0.5);
+        opacity: 0.8;
+    }
+
+    100% {
+        transform: scale(2.5);
+        opacity: 0;
+    }
+}
+
+/* Status Text */
+.compact-status-text {
     display: flex;
-    flex-direction: column;
-    gap: 2px;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 13px;
 }
 
-.compact-title {
-    font-family: 'Raleway', sans-serif;
+.status-primary {
     font-weight: 600;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.87);
+    color: white;
 }
 
-.compact-subtitle {
-    font-family: 'Raleway', sans-serif;
+.status-separator {
+    color: #666;
+    font-size: 10px;
+}
+
+.status-secondary {
+    color: #9d9d9d;
+}
+
+/* Right Metrics */
+.compact-right {
+    display: flex;
+    align-items: center;
+}
+
+.compact-metric {
+    display: flex;
+    align-items: center;
+    gap: 6px;
     font-size: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+.metric-label {
     color: #858585;
 }
 
-.compact-progress {
-    flex: 1;
-    max-width: 200px;
-    height: 6px;
-    background: #3c3c3c;
-    border-radius: 3px;
+.metric-value {
+    color: #4DA6FF;
+    font-weight: 600;
+}
+
+/* Slim Progress Line at Bottom */
+.compact-progress-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: rgba(77, 166, 255, 0.2);
     overflow: hidden;
 }
 
 .compact-progress-fill {
     height: 100%;
+    width: 100%;
     background: linear-gradient(90deg, #4DA6FF 0%, #00C8FF 100%);
-    border-radius: 3px;
-    transition: width 0.5s ease;
+    transform-origin: left center;
+    animation: progressCycle 5s linear infinite;
+}
+
+@keyframes progressCycle {
+    0% {
+        transform: scaleX(0);
+    }
+
+    100% {
+        transform: scaleX(1);
+    }
 }
