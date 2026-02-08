@@ -1,6 +1,5 @@
 # K2 Network
-<img width="961" height="394" alt="image" src="https://github.com/user-attachments/assets/7224301e-8551-4093-b447-46d6826b8492" />
-
+<img width="421" height="331" alt="image" src="https://github.com/user-attachments/assets/9a03018a-7ce5-40fc-893f-821e7cee64e5" />
 
 K2 is a decentralized P2P marketplace powered by AI agents. Users can buy, sell, and exchange digital assets, goods, and freelance services through an AI-assisted negotiation system without relying on centralized platforms.
 
