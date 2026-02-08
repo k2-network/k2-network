@@ -4,6 +4,9 @@
 
 K2 is a Tauri-based desktop application combining a React frontend with a Rust backend. The P2P layer is built on Iroh (v0.95), providing gossip messaging, blob storage, and document sync.
 
+<img width="4571" height="1442" alt="image" src="https://github.com/user-attachments/assets/54ec3bca-ab03-42c6-9335-b74812626b55" />
+
+
 ## Project Structure
 
 ```
