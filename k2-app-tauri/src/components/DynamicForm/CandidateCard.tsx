@@ -76,16 +76,22 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
     };
 
     // Price range visualization:
-    // The full bar = user's price range (gray)
-    // The filled portion = candidate's price range overlaid (white)
-    const userMin = userPriceRange?.min ?? candidate.priceRange.min;
-    const userMax = userPriceRange?.max ?? candidate.priceRange.max;
+    // - Track (gray) = User's range (my range) 
+    // - Fill (white) = Candidate's range (their range) overlaid on my range
+    const candMin = candidate.priceRange.min;
+    const candMax = candidate.priceRange.max;
     const currency = candidate.priceRange.currency;
 
-    // Calculate candidate range position within user range
-    const rangeSpan = userMax - userMin || 1;
-    const candLeftPct = Math.max(0, Math.min(100, ((candidate.priceRange.min - userMin) / rangeSpan) * 100));
-    const candRightPct = Math.max(0, Math.min(100, ((candidate.priceRange.max - userMin) / rangeSpan) * 100));
+    // User's range (my range) - this defines the track
+    const userMin = userPriceRange?.min ?? 0;
+    const userMax = userPriceRange?.max ?? 1000;
+    const userSpan = userMax - userMin || 1;
+
+    // Calculate candidate's position within user's range
+    // Clamp to 0-100%
+    const candLeftPct = Math.max(0, Math.min(100, ((candMin - userMin) / userSpan) * 100));
+    const candRightPct = Math.max(0, Math.min(100, ((candMax - userMin) / userSpan) * 100));
+    const candWidthPct = candRightPct - candLeftPct;
 
     return (
         <div
@@ -116,22 +122,22 @@ export const CandidateCard: React.FC<CandidateCardProps> = ({
             {/* Title */}
             <h4 className="candidate-title">{candidate.title}</h4>
 
-            {/* Price Range Visualization */}
+            {/* Price Range Visualization - User's range as track, Candidate's range as white fill */}
             <div className="price-range-section">
                 <div className="price-range-labels">
                     <span className="price-label-min">{formatPrice(userMin, currency)}</span>
                     <span className="price-label-max">{formatPrice(userMax, currency)}</span>
                 </div>
                 <div className="price-range-track">
-                    {/* Candidate's range overlay */}
+                    {/* White fill bar = Candidate's range */}
                     <div
                         className="price-range-fill"
-                        style={{ left: `${candLeftPct}%`, width: `${candRightPct - candLeftPct}%` }}
+                        style={{ left: `${candLeftPct}%`, width: `${candWidthPct}%` }}
+                        title={`${actionLabel}: ${formatPrice(candMin, currency)} - ${formatPrice(candMax, currency)}`}
                     />
-                    {/* Left endpoint circle */}
-                    <div className="price-endpoint price-endpoint-left" style={{ left: `${candLeftPct}%` }} />
-                    {/* Right endpoint circle */}
-                    <div className="price-endpoint price-endpoint-right" style={{ left: `${candRightPct}%` }} />
+                    {/* Two hollow circle endpoints at candidate's range */}
+                    <div className="price-endpoint" style={{ left: `${candLeftPct}%` }} />
+                    <div className="price-endpoint" style={{ left: `${candLeftPct + candWidthPct}%` }} />
                 </div>
             </div>
 

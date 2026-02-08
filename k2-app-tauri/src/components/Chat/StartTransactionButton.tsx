@@ -7,26 +7,21 @@
 import React from 'react';
 import { IoRocketOutline } from 'react-icons/io5';
 import './StartTransactionButton.css';
-import type { DynamicFormFields } from '../DynamicForm/types';
 
 interface StartTransactionButtonProps {
-  formData: Partial<DynamicFormFields>;
   actionText: string;
   title: string;
 }
 
 export const StartTransactionButton: React.FC<StartTransactionButtonProps> = ({
-  formData,
   actionText,
   title,
 }) => {
   const handleClick = () => {
-    console.log('🚀 [StartTransactionButton] Starting transaction:', formData);
+    console.log('🚀 [StartTransactionButton] Starting transaction');
 
-    // Dispatch event to Marketplace to switch to Tab 3 and start discovery
-    window.dispatchEvent(new CustomEvent('k2:startDiscovery', {
-      detail: { formData }
-    }));
+    // Dispatch event to Marketplace - it will use the current form data
+    window.dispatchEvent(new CustomEvent('k2:startDiscovery'));
   };
 
   return (

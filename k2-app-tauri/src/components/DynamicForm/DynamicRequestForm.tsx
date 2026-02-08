@@ -70,6 +70,7 @@ interface DynamicRequestFormProps {
     initialData?: Partial<DynamicFormFields>;
     onSubmit?: (data: DynamicFormFields) => void;
     onCancel?: () => void;
+    onFormChange?: (data: Partial<DynamicFormFields>) => void;  // Sync back changes
     isStreaming?: boolean;
     streamingFields?: Partial<FieldLoadingState>;
 }
@@ -78,6 +79,7 @@ export const DynamicRequestForm: React.FC<DynamicRequestFormProps> = ({
     initialData,
     onSubmit,
     onCancel,
+    onFormChange,
     isStreaming = false,
     streamingFields = {}
 }) => {
@@ -121,6 +123,13 @@ export const DynamicRequestForm: React.FC<DynamicRequestFormProps> = ({
             setFormData(prev => ({ ...prev, ...initialData }));
         }
     }, [initialData]);
+
+    // Sync formData back to parent whenever it changes
+    useEffect(() => {
+        if (onFormChange) {
+            onFormChange(formData);
+        }
+    }, [formData, onFormChange]);
 
     const topic = formData.topic as TopicType;
     const config = TOPIC_CONFIG[topic];

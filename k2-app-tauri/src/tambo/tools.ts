@@ -380,7 +380,6 @@ VÍ DỤ:
                 // Dispatch event to show "Bắt đầu giao dịch" button in chat
                 window.dispatchEvent(new CustomEvent('k2:showStartButton', {
                     detail: {
-                        formData,
                         actionText: actionLabels[input.action] || input.action,
                         title: input.title || input.topic
                     }

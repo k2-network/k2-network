@@ -227,7 +227,7 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({
             await invoke('start_listening', { topic });
 
             const startTime = Date.now();
-            const maxWait = 30000; // Wait 30s total
+            const maxWait = 300000; // Wait 30s total
             const broadcastInterval = 5000; // 5 seconds per cycle
             const minCandidates = 1;
 
@@ -238,10 +238,10 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({
               const now = Date.now();
               const elapsed = now - startTime;
 
-              // Progress bar
-              const cycleElapsed = elapsed % broadcastInterval;
-              const cycleProgress = (cycleElapsed / broadcastInterval) * 100;
-              setProgress(cycleProgress);
+              // Progress bar: smoothly increase from 50% to 95% over maxWait duration
+              // (50% was set at phase 'joined', now continue from there)
+              const overallProgress = 50 + (elapsed / maxWait) * 45; // 50% -> 95%
+              setProgress(Math.min(95, Math.round(overallProgress)));
 
               // Show candidate list as soon as we have at least 1
               if (collectedCandidates.length >= minCandidates && !showCandidateList) {
@@ -306,8 +306,8 @@ export const DiscoveryView: React.FC<DiscoveryViewProps> = ({
   if (!formData) {
     return (
       <div className="discovery-view-empty">
-        <p>Chưa có yêu cầu nào được tạo.</p>
-        <p>Vui lòng tạo yêu cầu mua/bán/trao đổi trước.</p>
+        <span>Chưa có yêu cầu nào được tạo.</span>
+        <span>Vui lòng tạo yêu cầu mua/bán/trao đổi trước.</span>
       </div>
     );
   }

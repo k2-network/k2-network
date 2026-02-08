@@ -37,6 +37,8 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use futures::StreamExt;
+use iroh_gossip::api::GossipSender;
+use tokio::sync::Mutex as TokioMutex;
 
 // Default tracker ID (same as example 12)
 const DEFAULT_TRACKER: &str = "71853750efc1219d7976639087c5fb25cf8d4b49f6d509366f2e094a3f781623";
@@ -352,6 +354,8 @@ pub struct K2Node {
     #[allow(dead_code)]
     router: Arc<Router>,
     data_dir: Option<PathBuf>,
+    /// Cache of active topic senders for broadcasting on existing subscriptions
+    active_topics: Arc<TokioMutex<HashMap<TopicId, GossipSender>>>,
 }
 
 impl K2Node {
@@ -426,6 +430,7 @@ impl K2Node {
             secret_key,
             router: Arc::new(router),
             data_dir,
+            active_topics: Arc::new(TokioMutex::new(HashMap::new())),
         })
     }
 
@@ -596,10 +601,39 @@ impl K2Node {
         }
     }
 
-    /// Broadcast a message to a gossip topic
+    /// Subscribe to a topic and cache the sender for later broadcasting
+    /// Returns the GossipTopic (for splitting into receiver etc)
+    /// The sender is cached so broadcast_message can reuse it
+    pub async fn subscribe_and_cache(&self, topic_id: TopicId) -> Result<GossipTopic> {
+        let topic = self.subscribe_topic(topic_id).await?;
+        Ok(topic)
+    }
+
+    /// Subscribe with discovery and cache the sender for later broadcasting
+    pub async fn subscribe_with_discovery_and_cache(&self, topic_id: TopicId) -> Result<GossipTopic> {
+        let topic = self.subscribe_topic_with_discovery(topic_id).await?;
+        Ok(topic)
+    }
+
+    /// Cache a sender for a topic (called after split())
+    pub async fn cache_sender(&self, topic_id: TopicId, sender: GossipSender) {
+        let mut topics = self.active_topics.lock().await;
+        topics.insert(topic_id, sender);
+    }
+
+    /// Broadcast a message to a gossip topic using cached sender
+    /// Falls back to creating new subscription if no cached sender exists
     pub async fn broadcast_message(&self, topic_id: TopicId, message: Vec<u8>) -> Result<()> {
-        let mut topic = self.subscribe_topic(topic_id).await?;
-        topic.broadcast(message.into()).await?;
+        let mut topics = self.active_topics.lock().await;
+        if let Some(sender) = topics.get_mut(&topic_id) {
+            // Use cached sender from existing subscription
+            sender.broadcast(message.into()).await?;
+        } else {
+            // Fallback: create new subscription (won't reach existing peers though)
+            println!("[K2] ⚠️ No cached sender for topic, creating new subscription");
+            let mut topic = self.subscribe_topic(topic_id).await?;
+            topic.broadcast(message.into()).await?;
+        }
         Ok(())
     }
 

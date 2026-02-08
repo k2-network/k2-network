@@ -8,7 +8,8 @@ interface HeaderProps {
 }
 
 export function Header({ title, nodeId, teamName = "k2-team" }: HeaderProps) {
-    const shortNodeId = nodeId ? `NodeId: ${nodeId.slice(0, 10)}...` : "";
+    // const shortNodeId = nodeId ? `NodeId: ${nodeId.slice(0, 10)}...` : "";
+    const shortNodeId = nodeId;
 
     return (
         <header className="header-bar">

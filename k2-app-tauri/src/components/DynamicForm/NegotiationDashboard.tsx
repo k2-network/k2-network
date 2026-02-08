@@ -153,11 +153,11 @@ export const NegotiationDashboard: React.FC<NegotiationDashboardProps> = ({
 
         // Score summary
         if (score >= 80) {
-            notes.unshift('⭐ Rất phù hợp!');
+            notes.unshift('Rất phù hợp!');
         } else if (score >= 60) {
-            notes.unshift('👍 Phù hợp');
+            notes.unshift('Phù hợp');
         } else {
-            notes.unshift('⚠️ Cần cân nhắc');
+            notes.unshift('Cần cân nhắc');
         }
 
         return notes.join(' • ');
@@ -168,25 +168,31 @@ export const NegotiationDashboard: React.FC<NegotiationDashboardProps> = ({
         setIsRunning(true);
         setCompletedCount(0);
 
+        // Collect results during loop to avoid stale closure
+        const results: Map<string, NegotiationState> = new Map();
+
         for (const candidate of candidates) {
             setCurrentNegotiating(candidate.nodeId);
 
             try {
                 const result = await negotiateWithCandidate(candidate);
+                results.set(candidate.nodeId, result);
                 setNegotiationStates(prev => {
                     const newStates = new Map(prev);
                     newStates.set(candidate.nodeId, result);
                     return newStates;
                 });
             } catch (error) {
+                const failedResult: NegotiationState = {
+                    status: 'failed',
+                    score: 0,
+                    aiNotes: 'Không thể kết nối',
+                    rounds: 0
+                };
+                results.set(candidate.nodeId, failedResult);
                 setNegotiationStates(prev => {
                     const newStates = new Map(prev);
-                    newStates.set(candidate.nodeId, {
-                        status: 'failed',
-                        score: 0,
-                        aiNotes: 'Không thể kết nối',
-                        rounds: 0
-                    });
+                    newStates.set(candidate.nodeId, failedResult);
                     return newStates;
                 });
             }
@@ -197,8 +203,20 @@ export const NegotiationDashboard: React.FC<NegotiationDashboardProps> = ({
         setCurrentNegotiating(null);
         setIsRunning(false);
 
-        // Dispatch event to chat for summary
-        const rankedResults = getRankedCandidates();
+        // Build ranked results from collected data
+        const rankedResults = [...candidates]
+            .map(c => {
+                const state = results.get(c.nodeId);
+                return {
+                    ...c,
+                    negotiationScore: state?.score || 0,
+                    aiNotes: state?.aiNotes || ''
+                };
+            })
+            .sort((a, b) => (b.negotiationScore || 0) - (a.negotiationScore || 0));
+
+        console.log('🎯 [NegotiationDashboard] Dispatching negotiationComplete:', rankedResults);
+
         window.dispatchEvent(new CustomEvent('k2:negotiationComplete', {
             detail: { candidates: rankedResults, formData }
         }));
@@ -310,16 +328,16 @@ export const NegotiationDashboard: React.FC<NegotiationDashboardProps> = ({
                                 {/* Candidate Info */}
                                 <div className="col-candidate">
                                     <div
-                                        className="candidate-avatar"
+                                        className="ranking-avatar"
                                         style={{ backgroundColor: avatarColor }}
                                     >
                                         {getInitials(candidate.name)}
                                     </div>
-                                    <div className="candidate-details">
-                                        <span className="candidate-name">{candidate.name}</span>
-                                        <span className="candidate-title">{candidate.title}</span>
+                                    <div className="ranking-details">
+                                        <span className="ranking-name">{candidate.name}</span>
+                                        <span className="ranking-title">{candidate.title}</span>
                                         {state?.aiNotes && (
-                                            <span className="ai-notes">{state.aiNotes}</span>
+                                            <span className="ranking-notes">{state.aiNotes}</span>
                                         )}
                                     </div>
                                 </div>

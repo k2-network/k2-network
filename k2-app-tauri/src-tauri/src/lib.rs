@@ -549,10 +549,9 @@ async fn broadcast_offer(topic: String, form_data: serde_json::Value, state: Sta
         Some(tx) => {
             // Send through channel → forwarder task → sender.broadcast (like example 12)
             tx.send(message).map_err(|e| format!("Channel send failed: {}", e))?;
-            // Generate unique ID for this offer
-            let id = K2Marketplace::generate_id();
-            println!("[K2] ✅ Offer ID generated: {}", id);
-            Ok(format!("Offer broadcast: {}", id))
+            let offer_id = K2Marketplace::generate_id();
+            println!("[K2] ✅ Offer sent to channel: {}", offer_id);
+            Ok(format!("Offer broadcast: {}", offer_id))
         }
         None => {
             println!("[K2] ❌ No sender channel for topic: {} - call start_listening first!", topic);
@@ -733,15 +732,9 @@ async fn start_listening(topic: String, app_handle: tauri::AppHandle, state: Sta
     tokio::spawn(async move {
         println!("[K2] 📤 Outgoing message forwarder started for: {}", topic_for_sender);
         while let Some(msg) = out_rx.recv().await {
-            println!("[K2] 📤 Broadcasting {} bytes on topic: {}", msg.len(), topic_for_sender);
-            // broadcast returns Result<()>
-            match s.broadcast(msg.into()).await {
-                Ok(_) => {
-                    println!("[K2] ✅ Broadcast sent successfully");
-                    // Debug info about peers
-                    // This is handled automatically by gossip protocol, but good to know
-                }
-                Err(e) => println!("[K2] ⚠️ Broadcast error: {}", e),
+            println!("[K2] 📤 Forwarding message ({} bytes) on topic: {}", msg.len(), topic_for_sender);
+            if let Err(e) = s.broadcast(msg.into()).await {
+                println!("[K2] ⚠️ Broadcast error: {}", e);
             }
         }
         println!("[K2] 📤 Outgoing forwarder ended for: {}", topic_for_sender);

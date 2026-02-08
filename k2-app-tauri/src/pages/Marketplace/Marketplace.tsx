@@ -127,6 +127,7 @@ const iconMap: Record<string, React.ReactNode> = {
 export function MarketplacePage() {
     const [activeTab, setActiveTab] = useState<TabType>('discover');
     const [formData, setFormData] = useState<Partial<DynamicFormFields> | null>(null);
+    const [currentFormData, setCurrentFormData] = useState<Partial<DynamicFormFields> | null>(null); // Live form data from DynamicRequestForm
     const [isFormStreaming, setIsFormStreaming] = useState(false);
     const [discoveryFormData, setDiscoveryFormData] = useState<DynamicFormFields | null>(null);
     const [negotiationCandidates, setNegotiationCandidates] = useState<Candidate[]>([]);
@@ -141,9 +142,10 @@ export function MarketplacePage() {
         };
 
         // Listen for start discovery event (from chat "Bắt đầu giao dịch" button)
-        const handleStartDiscovery = (event: CustomEvent<{ formData: DynamicFormFields }>) => {
-            console.log("🔍 [Marketplace] Starting discovery:", event.detail);
-            setDiscoveryFormData(event.detail.formData);
+        const handleStartDiscovery = () => {
+            // Use currentFormData from DynamicRequestForm (has priceRange and all user edits)
+            console.log("🔍 [Marketplace] Starting discovery with form data:", currentFormData);
+            setDiscoveryFormData(currentFormData as DynamicFormFields);
             setActiveTab('finding'); // Switch to finding tab
         };
 
@@ -153,7 +155,7 @@ export function MarketplacePage() {
             window.removeEventListener('k2:showDynamicForm' as any, handleFormData);
             window.removeEventListener('k2:startDiscovery' as any, handleStartDiscovery);
         };
-    }, []);
+    }, [currentFormData]);  // Depend on currentFormData to get latest value
 
     const handleFormSubmit = (data: DynamicFormFields) => {
         console.log("📤 [Marketplace] Form submitted:", data);
@@ -177,10 +179,7 @@ export function MarketplacePage() {
     // Handle negotiation complete
     const handleNegotiationComplete = (results: Candidate[]) => {
         console.log("✅ [Marketplace] Negotiation complete:", results);
-        // Dispatch event to chat for summary message
-        window.dispatchEvent(new CustomEvent('k2:negotiationComplete', {
-            detail: { candidates: results, formData: discoveryFormData }
-        }));
+        // Event already dispatched by NegotiationDashboard
     };
 
     return (
@@ -258,6 +257,7 @@ export function MarketplacePage() {
                             initialData={formData}
                             onSubmit={handleFormSubmit}
                             onCancel={handleFormCancel}
+                            onFormChange={setCurrentFormData}
                             isStreaming={isFormStreaming}
                         />
                     ) : (

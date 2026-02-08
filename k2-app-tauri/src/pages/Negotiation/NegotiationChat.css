@@ -124,7 +124,7 @@
 }
 
 .no-contacts button {
-    background: #5865f2;
+    background: #4DA6FF;
     color: white;
     border: none;
     padding: 8px 16px;
@@ -135,7 +135,7 @@
 }
 
 .no-contacts button:hover {
-    background: #4752c4;
+    background: #3396fa;
 }
 
 /* Contact Item */
@@ -200,6 +200,13 @@
     gap: 2px;
 }
 
+.contact-name-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
 .contact-name {
     font-size: 14px;
     font-weight: 500;
@@ -207,6 +214,20 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    flex: 1;
+    min-width: 0;
+}
+
+.auto-added-badge {
+    background: #5865f2;
+    color: white;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
 }
 
 .contact-preview {
@@ -341,8 +362,8 @@
 
 /* ============ DEAL INFO PANEL ============ */
 .deal-info-panel {
-    background: linear-gradient(135deg, #2d3748 0%, #1a202c 100%);
-    border-bottom: 1px solid #4a5568;
+    background: #2d2d30;
+    border-bottom: 1px solid #3c3c3c;
     transition: all 0.2s ease;
 }
 
@@ -420,11 +441,11 @@
 }
 
 .confirm-icon.confirmed {
-    color: #68d391;
+    color: #ffffff;
 }
 
 .confirm-icon.pending {
-    color: #a0aec0;
+    color: #858585;
 }
 
 .deal-label {
@@ -443,18 +464,18 @@
 }
 
 .deal-status.pending {
-    background: rgba(237, 137, 54, 0.15);
-    color: #ed8936;
+    background: rgba(133, 133, 133, 0.15);
+    color: #858585;
 }
 
 .deal-status.confirmed {
-    background: rgba(72, 187, 120, 0.15);
-    color: #68d391;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
 }
 
 .deal-status.expired {
-    background: rgba(113, 128, 150, 0.15);
-    color: #a0aec0;
+    background: rgba(133, 133, 133, 0.15);
+    color: #858585;
 }
 
 .deal-content {
@@ -492,7 +513,7 @@
 
 .deal-value.price {
     font-weight: 700;
-    color: #68d391;
+    color: #ffffff;
 }
 
 .deal-value.time-status {
@@ -502,18 +523,18 @@
 }
 
 .deal-value.time-status.active {
-    background: rgba(72, 187, 120, 0.2);
-    color: #68d391;
+    background: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
 }
 
 .deal-value.time-status.waiting {
-    background: rgba(237, 137, 54, 0.2);
-    color: #ed8936;
+    background: rgba(133, 133, 133, 0.15);
+    color: #858585;
 }
 
 .deal-value.time-status.expired {
-    background: rgba(113, 128, 150, 0.2);
-    color: #a0aec0;
+    background: rgba(133, 133, 133, 0.15);
+    color: #858585;
 }
 
 .deal-actions {
@@ -534,11 +555,11 @@
 }
 
 .confirm-status.confirmed {
-    color: #68d391;
+    color: #ffffff;
 }
 
 .confirm-status.pending {
-    color: #a0aec0;
+    color: #858585;
 }
 
 .deal-finalize-btn {
@@ -552,18 +573,18 @@
 }
 
 .deal-finalize-btn:not(.disabled) {
-    background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+    background: #4DA6FF;
     color: #fff;
 }
 
 .deal-finalize-btn:not(.disabled):hover {
-    background: linear-gradient(135deg, #38a169 0%, #2f855a 100%);
+    background: #1a8fdd;
     transform: translateY(-1px);
 }
 
 .deal-finalize-btn.disabled {
-    background: #4a5568;
-    color: #a0aec0;
+    background: #3c3c3c;
+    color: #858585;
     cursor: not-allowed;
 }
 
@@ -751,6 +772,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.no-chat-selected .empty-state {
+    background-color: #2b2d31;
 }
 
 .empty-state {

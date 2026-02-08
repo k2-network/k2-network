@@ -5,6 +5,7 @@ import {
   TamboProvider,
   useTamboThread,
   useTamboThreadInput,
+  useTamboContextHelpers,
   GenerationStage,
 } from "@tambo-ai/react";
 import { TAMBO_API_KEY, tamboTools, tamboComponents } from '../../tambo';
@@ -12,7 +13,6 @@ import './ChatInterface.css';
 import aiAgentIconLight from '../../assets/icons/ai-agent-large.svg';
 import aiAgentIconDark from '../../assets/icons/ai-agent-large-dark.svg';
 import { StartTransactionButton } from './StartTransactionButton';
-import type { DynamicFormFields } from '../DynamicForm/types';
 
 const DEFAULT_SUGGESTIONS = [
   "Tôi muốn mua video",
@@ -124,12 +124,14 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
   const [groqApiKey, setGroqApiKey] = useState<string>(() => {
     return localStorage.getItem('groq-api-key') || import.meta.env.VITE_GROQ_API_KEY || '';
   });
-  // State for "Bắt đầu giao dịch" button
-  const [startButtonData, setStartButtonData] = useState<{
-    formData: Partial<DynamicFormFields>;
-    actionText: string;
-    title: string;
-  } | null>(null);
+
+  // Injected messages (start button, negotiation results) - will be merged with Tambo messages
+  const [injectedMessages, setInjectedMessages] = useState<Array<{
+    id: string;
+    type: 'startButton' | 'negotiationResult';
+    content: any;
+    createdAt: string;
+  }>>([]);
 
   // Save Groq API key to localStorage
   const handleGroqApiKeyChange = (value: string) => {
@@ -140,6 +142,7 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
   // Tambo hooks
   const { thread, generationStage } = useTamboThread();
   const { value: inputValue, setValue: setInputValue, submit, isPending } = useTamboThreadInput();
+  const { addContextHelper } = useTamboContextHelpers();
 
   const messages = thread?.messages || [];
   const isProcessing = isPending || (generationStage !== GenerationStage.IDLE && generationStage !== GenerationStage.COMPLETE);
@@ -179,12 +182,17 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
   // Listen for "Bắt đầu giao dịch" button event from tools
   useEffect(() => {
     const handleShowStartButton = (event: CustomEvent<{
-      formData: Partial<DynamicFormFields>;
       actionText: string;
       title: string;
     }>) => {
       console.log("🔘 [ChatInterface] Received start button event:", event.detail);
-      setStartButtonData(event.detail);
+      // Inject as a message in the timeline
+      setInjectedMessages(prev => [...prev, {
+        id: `start-btn-${Date.now()}`,
+        type: 'startButton',
+        content: event.detail,
+        createdAt: new Date().toISOString()
+      }]);
     };
 
     window.addEventListener('k2:showStartButton' as any, handleShowStartButton);
@@ -192,6 +200,91 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
       window.removeEventListener('k2:showStartButton' as any, handleShowStartButton);
     };
   }, []);
+
+  // Track last negotiation to prevent duplicates
+  const lastNegotiationRef = useRef<string | null>(null);
+
+  // Listen for negotiation complete event - store result and add context helper
+  useEffect(() => {
+    const handleNegotiationComplete = (event: CustomEvent<{
+      candidates: any[];
+      formData: any;
+    }>) => {
+      console.log("🎯 [ChatInterface] Negotiation complete:", event.detail);
+      const { candidates, formData } = event.detail;
+
+      // Create unique key to prevent duplicates
+      const eventKey = `${formData?.title || ''}_${candidates.length}_${Date.now().toString().slice(0, -3)}`;
+      if (lastNegotiationRef.current === eventKey.slice(0, -1)) {
+        console.log("⚠️ [ChatInterface] Duplicate negotiation event, skipping");
+        return;
+      }
+      lastNegotiationRef.current = eventKey.slice(0, -1);
+
+      // Build summary message content
+      const topCandidates = candidates.slice(0, 3);
+      let summaryText = `**Kết quả đàm phán**\n\n`;
+      summaryText += `Tôi đã hoàn thành phân tích **${candidates.length}** ứng viên tiềm năng cho yêu cầu "${formData?.title || 'của bạn'}".\n\n`;
+
+      topCandidates.forEach((c: any, i: number) => {
+        const score = Math.round(c.negotiationScore || (c.matchScore * 100));
+        const priceText = c.priceRange ? `$${c.priceRange.min.toLocaleString()} - $${c.priceRange.max.toLocaleString()}` : 'N/A';
+        summaryText += `**#${i + 1} ${c.name} - ${score}%**\n\n`;
+        if (c.title) summaryText += `- **Tiêu đề:** ${c.title}\n`;
+        summaryText += `- **Giá:** ${priceText}\n`;
+        if (c.aiNotes) summaryText += `- **Ghi chú:** ${c.aiNotes}\n`;
+        summaryText += `\n`;
+      });
+
+      // Add recommendation
+      const bestCandidate = topCandidates[0];
+      if (bestCandidate) {
+        const bestScore = Math.round(bestCandidate.negotiationScore || (bestCandidate.matchScore * 100));
+        summaryText += `**Đề xuất**\n\n`;
+        if (bestScore >= 80) {
+          summaryText += `**${bestCandidate.name}** là lựa chọn tốt nhất! Điểm phù hợp cao (${bestScore}%), giá cả hợp lý và đang hoạt động.\n\n`;
+        } else if (bestScore >= 60) {
+          summaryText += `**${bestCandidate.name}** khá phù hợp với yêu cầu. Có thể thương lượng thêm về giá hoặc điều khoản.\n\n`;
+        } else {
+          summaryText += `Các ứng viên hiện tại cần được cân nhắc kỹ. Bạn có thể mở rộng tiêu chí tìm kiếm.\n\n`;
+        }
+      }
+
+      // Inject result into message timeline
+      setInjectedMessages(prev => [...prev, {
+        id: `neg-result-${Date.now()}`,
+        type: 'negotiationResult',
+        content: summaryText,
+        createdAt: new Date().toISOString()
+      }]);
+
+      // Add context helper so AI knows about the negotiation result
+      addContextHelper('negotiation_result', () => ({
+        description: 'Kết quả đàm phán gần nhất của người dùng',
+        summary: summaryText,
+        candidates: candidates.map((c: any) => ({
+          name: c.name,
+          score: Math.round(c.negotiationScore || (c.matchScore * 100)),
+          price: c.priceRange,
+          title: c.title,
+          notes: c.aiNotes
+        })),
+        formData: formData
+      }));
+
+      console.log("✅ [ChatInterface] Added negotiation context helper");
+
+      // Scroll to show results
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    };
+
+    window.addEventListener('k2:negotiationComplete' as any, handleNegotiationComplete);
+    return () => {
+      window.removeEventListener('k2:negotiationComplete' as any, handleNegotiationComplete);
+    };
+  }, [addContextHelper]);
 
   // Handle resize
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -230,7 +323,7 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isProcessing]);
+  }, [messages, injectedMessages, isProcessing]);
 
   const handleSubmit = async () => {
     if (!inputValue.trim() || isProcessing) return;
@@ -372,45 +465,91 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
                     </div>
                   </div>
                 ) : (
-                  messages.map((msg: any) => {
-                    // Tambo messages have content as array of { type, text }
-                    const content = typeof msg.content === 'string'
-                      ? msg.content
-                      : Array.isArray(msg.content)
-                        ? msg.content
-                          .filter((c: any) => c.type === 'text')
-                          .map((c: any) => c.text || '')
-                          .join('\n')
-                        : '';
+                  // Merge Tambo messages with injected messages and sort chronologically
+                  (() => {
+                    // Convert Tambo messages to unified format
+                    const tamboItems = messages.map((msg: any) => ({
+                      id: msg.id,
+                      type: 'tamboMessage' as const,
+                      data: msg,
+                      createdAt: msg.createdAt || new Date().toISOString()
+                    }));
 
-                    // Check if message has a rendered component
-                    const hasRenderedComponent = msg.renderedComponent !== undefined && msg.renderedComponent !== null;
+                    // Convert injected messages to unified format
+                    const injectedItems = injectedMessages.map((inj) => ({
+                      id: inj.id,
+                      type: inj.type,
+                      data: inj.content,
+                      createdAt: inj.createdAt
+                    }));
 
-                    return (
-                      <div key={msg.id} className={`message ${msg.role}`}>
-                        {msg.role === 'assistant' && (
-                          <img src={aiAgentIcon} alt="AI" className="ai-agent-large message-avatar" style={{ width: 28, height: 28, flexShrink: 0 }} />
-                        )}
-                        <div className="message-content">
-                          {/* Render text content */}
-                          {content && <MarkdownContent content={content} />}
-
-                          {/* Render Tambo generated component */}
-                          {hasRenderedComponent && (
-                            <div className="generated-component-wrapper">
-                              {msg.renderedComponent}
-                            </div>
-                          )}
-                        </div>
-                      </div>
+                    // Merge and sort by createdAt
+                    const allItems = [...tamboItems, ...injectedItems].sort(
+                      (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
                     );
-                  })
-                )}
 
+                    return allItems.map((item) => {
+                      if (item.type === 'tamboMessage') {
+                        const msg = item.data;
+                        const content = typeof msg.content === 'string'
+                          ? msg.content
+                          : Array.isArray(msg.content)
+                            ? msg.content
+                              .filter((c: any) => c.type === 'text')
+                              .map((c: any) => c.text || '')
+                              .join('\n')
+                            : '';
+                        const hasRenderedComponent = msg.renderedComponent !== undefined && msg.renderedComponent !== null;
+
+                        return (
+                          <div key={item.id} className={`message ${msg.role}`}>
+                            {msg.role === 'assistant' && (
+                              <img src={aiAgentIcon} alt="AI" className="ai-agent-large message-avatar" style={{ width: 28, height: 28, flexShrink: 0 }} />
+                            )}
+                            <div className="message-content">
+                              {content && <MarkdownContent content={content} />}
+                              {hasRenderedComponent && (
+                                <div className="generated-component-wrapper">
+                                  {msg.renderedComponent}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      } else if (item.type === 'startButton') {
+                        const btnData = item.data;
+                        return (
+                          <div key={item.id} className="message assistant">
+                            <img src={aiAgentIcon} alt="AI" className="ai-agent-large message-avatar" style={{ width: 28, height: 28, flexShrink: 0 }} />
+                            <div className="message-content">
+                              <StartTransactionButton
+                                actionText={btnData.actionText}
+                                title={btnData.title}
+                              />
+                            </div>
+                          </div>
+                        );
+                      } else if (item.type === 'negotiationResult') {
+                        return (
+                          <div key={item.id} className="message assistant">
+                            <img src={aiAgentIcon} alt="AI" className="ai-agent-large message-avatar" style={{ width: 28, height: 28, flexShrink: 0 }} />
+                            <div className="message-content">
+                              <MarkdownContent content={item.data} />
+                              <p style={{ marginTop: 12, fontSize: 12, color: '#9d9d9d' }}>
+                                Bạn muốn tôi hỗ trợ thêm gì? Ví dụ: so sánh chi tiết, soạn tin nhắn liên hệ, hoặc tìm kiếm thêm?
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    });
+                  })()
+                )}
 
                 {isProcessing && (
                   <div className="message assistant typing">
-                    <img src={aiAgentIcon} alt="AI" className="ai-agent-large message-avatar" style={{ width: 28, height: 28 }} />
+                    <img src={aiAgentIcon} alt="AI" className="message-avatar" style={{ width: 28, height: 28 }} />
                     <div className="message-content">
                       <div className="typing-indicator">
                         <span className="typing-dot"></span>
@@ -418,20 +557,6 @@ const ChatContent: React.FC<ChatInterfaceProps> = ({ isOpen, onToggle, width, on
                         <span className="typing-dot"></span>
                         <span className="typing-text">Đang xử lý...</span>
                       </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Start Transaction Button - shown after form creation */}
-                {startButtonData && !isProcessing && (
-                  <div className="message assistant">
-                    <img src={aiAgentIcon} alt="AI" className="ai-agent-large message-avatar" style={{ width: 28, height: 28, flexShrink: 0 }} />
-                    <div className="message-content">
-                      <StartTransactionButton
-                        formData={startButtonData.formData}
-                        actionText={startButtonData.actionText}
-                        title={startButtonData.title}
-                      />
                     </div>
                   </div>
                 )}

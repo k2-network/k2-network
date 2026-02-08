@@ -296,6 +296,19 @@
     color: var(--chat-text-primary);
 }
 
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+    font-size: 13px;
+    margin: 12px 0 8px 0;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.4;
+}
+
 .markdown-content p {
     margin: 0 0 0 0;
 }
@@ -362,11 +375,18 @@
     margin: 8px 0 8px 16px;
     padding: 0;
     color: var(--chat-text-primary);
+    font-size: 13px;
 }
 
 .markdown-content li {
     margin: 4px 0;
     line-height: 1.6;
+    font-size: 13px;
+}
+
+.markdown-content strong,
+.markdown-content b {
+    font-size: 13px;
 }
 
 /* Input Area - Dark Theme */
@@ -697,4 +717,159 @@
 
 .generated-component-wrapper>* {
     margin: 0 !important;
+}
+
+/* Negotiation Summary in Chat */
+.negotiation-summary {
+    font-size: 13px;
+    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.negotiation-summary .summary-intro {
+    margin: 0 0 16px 0;
+}
+
+.negotiation-summary .summary-intro strong {
+    color: #4DA6FF;
+}
+
+.negotiation-summary .candidates-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.candidate-summary-item {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.candidate-summary-item .candidate-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.candidate-summary-item .rank {
+    font-weight: 700;
+    color: #4DA6FF;
+    font-size: 12px;
+}
+
+.candidate-summary-item .name {
+    flex: 1;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.95);
+}
+
+.candidate-summary-item .score {
+    font-weight: 700;
+    font-size: 13px;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.candidate-summary-item .score.high {
+    color: #47E069;
+    background: rgba(71, 224, 105, 0.15);
+}
+
+.candidate-summary-item .score.medium {
+    color: #FFB84D;
+    background: rgba(255, 184, 77, 0.15);
+}
+
+.candidate-summary-item .score.low {
+    color: #FF6B6B;
+    background: rgba(255, 107, 107, 0.15);
+}
+
+.candidate-summary-item .candidate-title {
+    margin: 0 0 4px 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.candidate-summary-item .candidate-price {
+    margin: 0 0 4px 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.candidate-summary-item .candidate-notes {
+    margin: 0;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.negotiation-summary .recommendation {
+    background: rgba(77, 166, 255, 0.08);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.negotiation-summary .recommendation .rec-title {
+    margin: 0 0 8px 0;
+    font-weight: 600;
+    color: #4DA6FF;
+}
+
+.negotiation-summary .recommendation p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+.negotiation-summary .recommendation strong {
+    color: #47E069;
+}
+
+.negotiation-summary .next-step {
+    margin: 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+    font-style: italic;
+}
+
+/* Previous result - compact style */
+.negotiation-summary.previous-result {
+    padding: 12px;
+    background: rgba(42, 42, 42, 0.6);
+}
+
+.negotiation-summary.previous-result .summary-header {
+    margin: 0 0 8px 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.negotiation-summary .candidates-list.compact {
+    gap: 6px;
+}
+
+.negotiation-summary .candidate-summary-item.compact {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 6px;
+}
+
+.negotiation-summary .candidate-summary-item.compact .rank {
+    font-size: 11px;
+}
+
+.negotiation-summary .candidate-summary-item.compact .name {
+    flex: 1;
+    font-size: 12px;
+}
+
+.negotiation-summary .candidate-summary-item.compact .score {
+    font-size: 11px;
 }

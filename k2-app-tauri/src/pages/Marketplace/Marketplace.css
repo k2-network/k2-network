@@ -204,9 +204,9 @@
     justify-content: center;
     padding: 60px 40px;
     text-align: center;
-    background: #222226;
+    /* background: #222226; */
     border-radius: 16px;
-    border: 1px dashed #3c3c3c;
+    /* border: 1px dashed #3c3c3c; */
     margin: 20px 0;
 }
 

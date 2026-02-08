@@ -5,36 +5,36 @@
 .start-transaction-wrapper {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    padding: 16px;
-    background: linear-gradient(135deg, rgba(77, 166, 255, 0.1) 0%, rgba(0, 200, 255, 0.05) 100%);
-    border-radius: 12px;
-    border: 1px solid rgba(77, 166, 255, 0.2);
-    margin-top: 12px;
+    gap: 10px;
+    padding: 12px;
+    background: rgba(60, 60, 60, 0.3);
+    border-radius: 8px;
+    border: 1px solid #3c3c3c;
+    margin: 0;
 }
 
 .transaction-summary {
     margin: 0;
-    font-size: 14px;
+    font-size: 13px;
     color: #b0b0b0;
     line-height: 1.5;
 }
 
 .transaction-summary strong {
-    color: #4DA6FF;
+    color: #cccccc;
 }
 
 .start-transaction-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 10px 24px;
-    background: linear-gradient(135deg, #4DA6FF 0%, #00A8FF 100%);
+    padding: 10px 20px;
+    background: #4DA6FF;
     border: none;
-    border-radius: 8px;
+    border-radius: 6px;
     color: white;
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -42,14 +42,13 @@
 }
 
 .start-transaction-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(77, 166, 255, 0.4);
+    background: #1a8fdd;
 }
 
 .start-transaction-btn:active {
-    transform: translateY(0);
+    transform: scale(0.98);
 }
 
 .start-transaction-btn .btn-icon {
-    font-size: 18px;
+    font-size: 16px;
 }

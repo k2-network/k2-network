@@ -115,7 +115,7 @@
     font-size: 14px;
     color: rgba(255, 255, 255, 0.87);
     margin: 0 0 12px 0;
-    line-height: 1.4;
+    /* line-height: 1.4; */
     display: -webkit-box;
     -webkit-line-clamp: 2;
     line-clamp: 2;
@@ -124,9 +124,9 @@
     min-height: 38px;
 }
 
-/* ===== Price Range Visualization ===== */
+/* ===== Price Range Visualization - Dual Range ===== */
 .price-range-section {
-    margin-bottom: 16px;
+    margin-bottom: 32px;
 }
 
 .price-range-labels {

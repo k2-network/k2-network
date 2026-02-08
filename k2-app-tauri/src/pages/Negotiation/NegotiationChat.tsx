@@ -88,6 +88,12 @@ export const NegotiationChat: React.FC = () => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+    const contactsRef = useRef<ContactWithStatus[]>([]);
+
+    // Keep contacts ref updated
+    useEffect(() => {
+        contactsRef.current = contacts;
+    }, [contacts]);
 
     // Close menu when clicking outside
     useEffect(() => {
@@ -125,7 +131,7 @@ export const NegotiationChat: React.FC = () => {
     // Listen for incoming P2P messages
     useEffect(() => {
         const setupListener = async () => {
-            const unlisten = await listen<any>('k2://chat-message', (event) => {
+            const unlisten = await listen<any>('k2://chat-message', async (event) => {
                 const payload = event.payload;
                 console.log('[NegotiationChat] Received message:', payload);
 
@@ -133,6 +139,76 @@ export const NegotiationChat: React.FC = () => {
                 if (payload.sender_node_id === myNodeId) {
                     console.log('[NegotiationChat] Skipping own message');
                     return;
+                }
+
+                // Check if sender is already in contacts
+                const existingContact = contactsRef.current.find(c => c.node_id === payload.sender_node_id);
+
+                if (!existingContact) {
+                    console.log('[NegotiationChat] Auto-adding unknown sender as contact:', payload.sender_name);
+                    try {
+                        // Add contact automatically with sender's name or fallback
+                        const senderName = payload.sender_name || `User-${payload.sender_node_id.slice(0, 8)}`;
+                        const newContact = await invoke<Contact>('add_contact', {
+                            nodeId: payload.sender_node_id,
+                            nickname: senderName,
+                            notes: 'Auto-added from incoming message',
+                        });
+
+                        // Add to contacts list with unread count = 1 for the incoming message
+                        setContacts(prev => [...prev, {
+                            ...newContact,
+                            isOnline: true, // They just sent a message, so they're online
+                            unreadCount: 1, // Mark as having 1 unread message
+                            lastMessage: payload.content.substring(0, 50) + (payload.content.length > 50 ? '...' : '')
+                        }]);
+
+                        console.log('[NegotiationChat] Successfully auto-added contact:', senderName);
+
+                        // Show a brief notification that a new contact was added (with permission check)
+                        if ('Notification' in window) {
+                            if (Notification.permission === 'granted') {
+                                const notification = new Notification('Tin nhắn mới', {
+                                    body: `${senderName} đã gửi tin nhắn cho bạn`,
+                                    icon: '/favicon.ico' // Optional: add an icon
+                                });
+
+                                // Auto-close notification after 3 seconds
+                                setTimeout(() => notification.close(), 3000);
+                            } else if (Notification.permission !== 'denied') {
+                                // Request permission if not denied
+                                Notification.requestPermission().then(permission => {
+                                    if (permission === 'granted') {
+                                        const notification = new Notification('Tin nhắn mới', {
+                                            body: `${senderName} đã gửi tin nhắn cho bạn`,
+                                            icon: '/favicon.ico'
+                                        });
+                                        setTimeout(() => notification.close(), 3000);
+                                    }
+                                });
+                            }
+                        }
+
+                    } catch (err) {
+                        console.error('[NegotiationChat] Failed to auto-add contact:', err);
+                        // Continue processing message even if contact addition fails
+                    }
+                } else {
+                    // Update unread count for existing contact if not currently selected
+                    if (selectedContact?.node_id !== payload.sender_node_id) {
+                        setTimeout(() => {
+                            setContacts(prev => prev.map(c => {
+                                if (c.node_id === payload.sender_node_id) {
+                                    return {
+                                        ...c,
+                                        unreadCount: (c.unreadCount || 0) + 1,
+                                        lastMessage: payload.content.substring(0, 50) + (payload.content.length > 50 ? '...' : '')
+                                    };
+                                }
+                                return c;
+                            }));
+                        }, 100);
+                    }
                 }
 
                 const msg: ChatMessage = {
@@ -158,14 +234,6 @@ export const NegotiationChat: React.FC = () => {
                     newMap.set(payload.sender_node_id, [...existing, msg]);
                     return newMap;
                 });
-
-                // Update unread count if not selected
-                setContacts(prev => prev.map(c => {
-                    if (c.node_id === payload.sender_node_id && selectedContact?.node_id !== c.node_id) {
-                        return { ...c, unreadCount: (c.unreadCount || 0) + 1, lastMessage: payload.content };
-                    }
-                    return c;
-                }));
             });
 
             return unlisten;
@@ -357,7 +425,7 @@ export const NegotiationChat: React.FC = () => {
                         <div className="no-contacts">
                             <p>Chưa có liên hệ nào</p>
                             <button onClick={() => setShowAddContact(true)}>
-                                + Thêm liên hệ
+                                Thêm liên hệ
                             </button>
                         </div>
                     ) : (
@@ -372,7 +440,12 @@ export const NegotiationChat: React.FC = () => {
                                     <span className={`online-indicator ${contact.isOnline ? 'online' : ''}`} />
                                 </div>
                                 <div className="contact-info">
-                                    <span className="contact-name">{contact.nickname}</span>
+                                    <div className="contact-name-row">
+                                        <span className="contact-name">{contact.nickname}</span>
+                                        {contact.notes === 'Auto-added from incoming message' && (
+                                            <span className="auto-added-badge">Auto</span>
+                                        )}
+                                    </div>
                                     {contact.lastMessage && (
                                         <span className="contact-preview">{contact.lastMessage}</span>
                                     )}
