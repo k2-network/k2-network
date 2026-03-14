@@ -22,8 +22,7 @@ use iroh_gossip::{
 };
 use iroh_docs::{
     protocol::Docs,
-    store::Query as DocsQuery,
-    NamespaceId, AuthorId,
+    NamespaceId,
     ALPN as DOCS_ALPN,
 };
 use iroh_content_discovery::{
@@ -36,16 +35,12 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
-use futures::StreamExt;
 use iroh_gossip::api::GossipSender;
 use tokio::sync::Mutex as TokioMutex;
-
+mod docs;
+pub use docs::*;
 // Default tracker ID (same as example 12)
-const DEFAULT_TRACKER: &str = "71853750efc1219d7976639087c5fb25cf8d4b49f6d509366f2e094a3f781623";
-
-// Fixed namespace ID for contacts document (so all instances use same doc)
-const CONTACTS_NAMESPACE: &str = "k2-contacts-v1";
-
+pub const DEFAULT_TRACKER: &str = "71853750efc1219d7976639087c5fb25cf8d4b49f6d509366f2e094a3f781623";
 
 // ============================================
 // CONTACT BOOK (Legacy JSON - for backwards compatibility)
@@ -144,76 +139,58 @@ impl ContactBook {
 
 /// Contact book powered by iroh-docs for P2P sync
 /// Stores contacts in a distributed document that can sync across devices
+// ============================================
+
+/// Contact book powered by K2Docs intelligent handle
 pub struct ContactBookDocs {
-    docs: Docs,
-    store: MemStore,
-    namespace_id: Option<NamespaceId>,
-    author_id: Option<AuthorId>,
+    client: K2DocsClient,
+    handle: Option<K2DocHandle>,
 }
 
 impl ContactBookDocs {
-    /// Create a new ContactBookDocs wrapper
-    pub fn new(docs: Docs, store: MemStore) -> Self {
-        Self {
-            docs,
-            store,
-            namespace_id: None,
-            author_id: None,
-        }
+    pub fn new(client: K2DocsClient) -> Self {
+        Self { client, handle: None }
     }
 
     /// Initialize the contacts document
-    /// Creates or opens an existing contacts document
     pub async fn init(&mut self) -> Result<()> {
-        // Get default author
-        let author_id = self.docs.author_default().await
-            .context("Failed to get default author")?;
-        self.author_id = Some(author_id);
-
         // Try to find existing contacts doc or create new one
-        let mut found_doc = None;
-        let mut docs_stream = self.docs.list().await?;
+        let mut found_id = None;
+        let docs_list = self.client.list_documents().await?;
         
-        while let Some(result) = docs_stream.next().await {
-            if let Ok((namespace_id, _capability)) = result {
-                // Check if this is our contacts doc by looking for marker key
-                if let Some(doc) = self.docs.open(namespace_id).await? {
-                    if let Some(_entry) = doc.get_exact(author_id, b"__k2_contacts_marker__", false).await? {
-                        found_doc = Some(namespace_id);
+        for id in docs_list {
+            if let Some(h) = self.client.open_doc(id).await? {
+                // Check marker
+                if let Ok(Some(marker)) = h.get(b"__k2_contacts_marker__").await {
+                    if marker == b"k2-contacts-v1" {
+                        found_id = Some(id);
                         break;
                     }
                 }
             }
         }
 
-        if let Some(ns_id) = found_doc {
+        let handle = if let Some(id) = found_id {
+            let h = self.client.open_doc(id).await?.unwrap();
             println!("[K2-Docs] 📂 Opened existing contacts document");
-            self.namespace_id = Some(ns_id);
+            h
         } else {
-            // Create new contacts document
-            let doc = self.docs.create().await.context("Failed to create contacts doc")?;
-            let ns_id = doc.id();
-            
-            // Set marker to identify this as contacts doc
-            doc.set_bytes(author_id, b"__k2_contacts_marker__".to_vec(), b"k2-contacts-v1".to_vec())
-                .await
-                .context("Failed to set marker")?;
-            
-            println!("[K2-Docs] 📝 Created new contacts document: {}", ns_id);
-            self.namespace_id = Some(ns_id);
-        }
+            let h = self.client.create_doc().await?;
+            h.put(b"__k2_contacts_marker__", b"k2-contacts-v1").await?;
+            println!("[K2-Docs] 📝 Created new contacts document: {}", h.id());
+            h
+        };
 
+        self.handle = Some(handle);
         Ok(())
+    }
+
+    fn handle(&self) -> Result<&K2DocHandle> {
+        self.handle.as_ref().ok_or_else(|| anyhow::anyhow!("ContactBookDocs not initialized"))
     }
 
     /// Add a contact
     pub async fn add(&self, node_id: String, nickname: String, notes: Option<String>) -> Result<Contact> {
-        let author_id = self.author_id.ok_or_else(|| anyhow::anyhow!("Not initialized"))?;
-        let namespace_id = self.namespace_id.ok_or_else(|| anyhow::anyhow!("Not initialized"))?;
-        
-        let doc = self.docs.open(namespace_id).await?
-            .ok_or_else(|| anyhow::anyhow!("Document not found"))?;
-
         let contact = Contact {
             node_id: node_id.clone(),
             nickname,
@@ -224,77 +201,35 @@ impl ContactBookDocs {
             notes,
         };
 
-        // Serialize and store
         let key = format!("contact:{}", node_id);
-        let value = serde_json::to_vec(&contact)?;
-        doc.set_bytes(author_id, key.as_bytes().to_vec(), value).await?;
-
+        self.handle()?.put_json(key.as_bytes(), &contact).await?;
         println!("[K2-Docs] ✅ Added contact: {}", node_id);
         Ok(contact)
     }
 
     /// Remove a contact
     pub async fn remove(&self, node_id: &str) -> Result<bool> {
-        let author_id = self.author_id.ok_or_else(|| anyhow::anyhow!("Not initialized"))?;
-        let namespace_id = self.namespace_id.ok_or_else(|| anyhow::anyhow!("Not initialized"))?;
-        
-        let doc = self.docs.open(namespace_id).await?
-            .ok_or_else(|| anyhow::anyhow!("Document not found"))?;
-
         let key = format!("contact:{}", node_id);
-        let deleted = doc.del(author_id, key.as_bytes().to_vec()).await?;
-        
+        let deleted = self.handle()?.delete(key.as_bytes()).await?;
         println!("[K2-Docs] 🗑️ Removed contact: {} (deleted {} entries)", node_id, deleted);
         Ok(deleted > 0)
     }
 
     /// Get a contact by node_id
     pub async fn get(&self, node_id: &str) -> Result<Option<Contact>> {
-        let author_id = self.author_id.ok_or_else(|| anyhow::anyhow!("Not initialized"))?;
-        let namespace_id = self.namespace_id.ok_or_else(|| anyhow::anyhow!("Not initialized"))?;
-        
-        let doc = self.docs.open(namespace_id).await?
-            .ok_or_else(|| anyhow::anyhow!("Document not found"))?;
-
         let key = format!("contact:{}", node_id);
-        
-        if let Some(entry) = doc.get_exact(author_id, key.as_bytes(), false).await? {
-            // Read content from blobs
-            let hash = entry.content_hash();
-            if let Ok(content) = self.store.get_bytes(hash).await {
-                if let Ok(contact) = serde_json::from_slice::<Contact>(&content) {
-                    return Ok(Some(contact));
-                }
-            }
-        }
-        Ok(None)
+        self.handle()?.get_json(key.as_bytes()).await
     }
 
     /// List all contacts
     pub async fn list(&self) -> Result<Vec<Contact>> {
-        let namespace_id = self.namespace_id.ok_or_else(|| anyhow::anyhow!("Not initialized"))?;
-        
-        let doc = self.docs.open(namespace_id).await?
-            .ok_or_else(|| anyhow::anyhow!("Document not found"))?;
-
+        let results = self.handle()?.list_prefix(b"contact:").await?;
         let mut contacts = Vec::new();
-        
-        // Query all entries with prefix "contact:"
-        let query = DocsQuery::key_prefix(b"contact:");
-        let entries = doc.get_many(query).await?;
-        tokio::pin!(entries);
-        
-        while let Some(result) = entries.next().await {
-            if let Ok(entry) = result {
-                let hash = entry.content_hash();
-                if let Ok(content) = self.store.get_bytes(hash).await {
-                    if let Ok(contact) = serde_json::from_slice::<Contact>(&content) {
-                        contacts.push(contact);
-                    }
-                }
+        for (_key, value) in results {
+            if let Ok(contact) = serde_json::from_slice::<Contact>(&value) {
+                contacts.push(contact);
             }
         }
-
         Ok(contacts)
     }
 
@@ -302,17 +237,8 @@ impl ContactBookDocs {
     pub async fn update_nickname(&self, node_id: &str, nickname: String) -> Result<bool> {
         if let Some(mut contact) = self.get(node_id).await? {
             contact.nickname = nickname;
-            
-            let author_id = self.author_id.ok_or_else(|| anyhow::anyhow!("Not initialized"))?;
-            let namespace_id = self.namespace_id.ok_or_else(|| anyhow::anyhow!("Not initialized"))?;
-            
-            let doc = self.docs.open(namespace_id).await?
-                .ok_or_else(|| anyhow::anyhow!("Document not found"))?;
-
             let key = format!("contact:{}", node_id);
-            let value = serde_json::to_vec(&contact)?;
-            doc.set_bytes(author_id, key.as_bytes().to_vec(), value).await?;
-            
+            self.handle()?.put_json(key.as_bytes(), &contact).await?;
             println!("[K2-Docs] ✏️ Updated contact nickname: {}", node_id);
             return Ok(true);
         }
@@ -321,17 +247,12 @@ impl ContactBookDocs {
 
     /// Get the namespace ID for sharing/syncing
     pub fn namespace_id(&self) -> Option<NamespaceId> {
-        self.namespace_id
+        self.handle.as_ref().map(|h| h.id())
     }
 
     /// Start syncing with peers
     pub async fn start_sync(&self, peers: Vec<iroh_base::EndpointAddr>) -> Result<()> {
-        let namespace_id = self.namespace_id.ok_or_else(|| anyhow::anyhow!("Not initialized"))?;
-        
-        let doc = self.docs.open(namespace_id).await?
-            .ok_or_else(|| anyhow::anyhow!("Document not found"))?;
-        
-        doc.start_sync(peers).await?;
+        self.handle()?.sync(peers).await?;
         println!("[K2-Docs] 🔄 Started contact sync");
         Ok(())
     }
@@ -350,6 +271,7 @@ pub struct K2Node {
     store: MemStore,
     gossip: Gossip,
     docs: Docs,
+    docs_client: K2DocsClient,
     secret_key: SecretKey,
     #[allow(dead_code)]
     router: Arc<Router>,
@@ -421,12 +343,16 @@ impl K2Node {
             .accept(DOCS_ALPN, docs.clone())
             .spawn();
         
+        // Create docs client
+        let docs_client = K2DocsClient::new(docs.clone(), store.clone());
+
         Ok(Self {
             endpoint,
             blobs,
             store,
             gossip,
             docs,
+            docs_client,
             secret_key,
             router: Arc::new(router),
             data_dir,
@@ -439,6 +365,7 @@ impl K2Node {
         self.secret_key.public().to_string()
     }
 
+
     /// Get the Docs protocol instance
     pub fn docs(&self) -> &Docs {
         &self.docs
@@ -446,7 +373,7 @@ impl K2Node {
 
     /// Create a ContactBookDocs instance
     pub fn contact_book(&self) -> ContactBookDocs {
-        ContactBookDocs::new(self.docs.clone(), self.store.clone())
+        ContactBookDocs::new(self.docs_client.clone())
     }
 
     /// Connect to a peer by their public key string (hex)
@@ -734,24 +661,4 @@ impl K2Marketplace {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_broadcast_delay() {
-        for _ in 0..10 {
-            let delay = K2Marketplace::get_broadcast_delay();
-            assert!(delay >= 1000 && delay <= 4000);
-        }
-    }
-
-    #[test]
-    fn test_topic_to_id() {
-        let topic1 = K2Marketplace::topic_to_id("Digital Assets");
-        let topic2 = K2Marketplace::topic_to_id("Digital Assets");
-        let topic3 = K2Marketplace::topic_to_id("Goods");
-        
-        assert_eq!(topic1, topic2);
-        assert_ne!(topic1, topic3);
-    }
-}
+mod lib_tests;
