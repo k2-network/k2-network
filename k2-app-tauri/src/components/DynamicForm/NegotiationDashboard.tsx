@@ -8,6 +8,7 @@
  * - Final results with copy nodeId feature
  */
 import React, { useState, useEffect, useCallback } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 import type { Candidate, DynamicFormFields } from './types';
 import './NegotiationDashboard.css';
 
@@ -73,43 +74,88 @@ export const NegotiationDashboard: React.FC<NegotiationDashboardProps> = ({
         setNegotiationStates(states);
     }, [candidates]);
 
-    // Simulate AI negotiation for a single candidate
+    // Real P2P negotiation for a single candidate
     const negotiateWithCandidate = useCallback(async (candidate: Candidate): Promise<NegotiationState> => {
-        // Simulate negotiation rounds (2-5 rounds)
-        const totalRounds = Math.floor(Math.random() * 4) + 2;
+        const totalRounds = 3; // Fixed 3-round evaluation
         let currentScore = candidate.matchScore * 50; // Base score from match
 
-        for (let round = 1; round <= totalRounds; round++) {
-            // Update progress
-            setNegotiationStates(prev => {
-                const newStates = new Map(prev);
-                newStates.set(candidate.nodeId, {
-                    status: 'negotiating',
-                    score: Math.round(currentScore),
-                    aiNotes: `Round ${round}/${totalRounds}: Evaluating...`,
-                    rounds: round
-                });
-                return newStates;
+        // Round 1: Check if peer is reachable (ping)
+        setNegotiationStates(prev => {
+            const newStates = new Map(prev);
+            newStates.set(candidate.nodeId, {
+                status: 'negotiating',
+                score: Math.round(currentScore),
+                aiNotes: `Round 1/${totalRounds}: Pinging peer...`,
+                rounds: 1
             });
+            return newStates;
+        });
 
-            // Simulate network delay (1-2s per round)
-            await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
-
-            // Update score based on various factors
-            const priceMatch = formData?.priceRange
-                ? 1 - Math.abs((candidate.priceRange.min + candidate.priceRange.max) / 2 -
-                    (formData.priceRange.min + formData.priceRange.max) / 2) /
-                Math.max(formData.priceRange.max, 1)
-                : 0.5;
-
-            const locationBonus = formData?.location === candidate.location ? 10 : 0;
-            const statusBonus = candidate.status === 'active' ? 15 : 0;
-
-            currentScore = Math.min(100, currentScore + (priceMatch * 10) + locationBonus + statusBonus + (Math.random() * 5));
+        let isOnline = false;
+        try {
+            isOnline = await invoke<boolean>('ping_contact', { nodeId: candidate.nodeId });
+        } catch {
+            isOnline = false;
         }
+        const onlineBonus = isOnline ? 25 : 0;
+        currentScore = Math.min(100, currentScore + onlineBonus);
+        await new Promise(resolve => setTimeout(resolve, 800));
 
-        // Generate AI notes
-        const notes = generateAINotes(candidate, currentScore, formData);
+        // Round 2: Price match evaluation
+        setNegotiationStates(prev => {
+            const newStates = new Map(prev);
+            newStates.set(candidate.nodeId, {
+                status: 'negotiating',
+                score: Math.round(currentScore),
+                aiNotes: `Round 2/${totalRounds}: Evaluating price match...`,
+                rounds: 2
+            });
+            return newStates;
+        });
+
+        const priceMatch = formData?.priceRange
+            ? 1 - Math.abs(
+                (candidate.priceRange.min + candidate.priceRange.max) / 2 -
+                (formData.priceRange.min + formData.priceRange.max) / 2
+            ) / Math.max(formData.priceRange.max, 1)
+            : 0.5;
+        const locationBonus = formData?.location === candidate.location ? 10 : 0;
+        currentScore = Math.min(100, currentScore + priceMatch * 15 + locationBonus);
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Round 3: Send interest if score is high enough and peer is online
+        setNegotiationStates(prev => {
+            const newStates = new Map(prev);
+            newStates.set(candidate.nodeId, {
+                status: 'negotiating',
+                score: Math.round(currentScore),
+                aiNotes: `Round 3/${totalRounds}: Sending interest...`,
+                rounds: 3
+            });
+            return newStates;
+        });
+
+        if (isOnline && currentScore >= 60 && formData) {
+            try {
+                await invoke('send_interest', {
+                    topic: candidate.topic || formData.topic || 'Goods',
+                    sellerNodeId: candidate.nodeId,
+                    formData: {
+                        title: formData.title,
+                        description: formData.description,
+                        priceRange: formData.priceRange,
+                        topic: formData.topic,
+                        action: formData.action,
+                    },
+                });
+                currentScore = Math.min(100, currentScore + 5); // Bonus for successful interest
+            } catch (e) {
+                console.warn('[Negotiation] send_interest failed:', e);
+            }
+        }
+        await new Promise(resolve => setTimeout(resolve, 800));
+
+        const notes = generateAINotes(candidate, currentScore, formData, isOnline);
 
         return {
             status: 'completed',
@@ -120,7 +166,7 @@ export const NegotiationDashboard: React.FC<NegotiationDashboardProps> = ({
     }, [formData]);
 
     // Generate AI analysis notes
-    const generateAINotes = (candidate: Candidate, score: number, formData: DynamicFormFields | null): string => {
+    const generateAINotes = (candidate: Candidate, score: number, formData: DynamicFormFields | null, isOnline?: boolean): string => {
         const notes: string[] = [];
 
         // Price analysis
@@ -146,8 +192,12 @@ export const NegotiationDashboard: React.FC<NegotiationDashboardProps> = ({
             }
         }
 
-        // Status analysis
-        if (candidate.status === 'active') {
+        // Online status from real ping
+        if (isOnline === true) {
+            notes.push('Online (đã xác nhận)');
+        } else if (isOnline === false) {
+            notes.push('Không phản hồi ping');
+        } else if (candidate.status === 'active') {
             notes.push('Đang hoạt động');
         }
 
