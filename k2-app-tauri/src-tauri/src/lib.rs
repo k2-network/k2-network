@@ -24,7 +24,7 @@ pub struct AppState {
 async fn init_node(state: State<'_, AppState>, _app: tauri::AppHandle) -> Result<String, String> {
     // Guard: Check if node is already initialized
     {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         if let Some(ref existing_node) = *guard {
             let node_id = existing_node.my_id();
             let short_id = if node_id.len() > 10 {
@@ -68,7 +68,7 @@ async fn init_node(state: State<'_, AppState>, _app: tauri::AppHandle) -> Result
     
     // Store node in state
     {
-        let mut state_node = state.node.lock().unwrap();
+        let mut state_node = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         *state_node = Some(node);
     }
     
@@ -80,7 +80,7 @@ async fn init_node(state: State<'_, AppState>, _app: tauri::AppHandle) -> Result
 #[tauri::command]
 async fn get_my_node_id(state: State<'_, AppState>) -> Result<String, String> {
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized")?
     };
     Ok(node.my_id())
@@ -149,7 +149,7 @@ async fn list_contacts(state: State<'_, AppState>) -> Result<Vec<Contact>, Strin
 #[tauri::command]
 async fn ping_contact(node_id: String, state: State<'_, AppState>) -> Result<bool, String> {
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized")?
     };
     
@@ -170,7 +170,7 @@ async fn send_chat_message(
     println!("[K2] 💬 Sending chat message to: {}", recipient_node_id);
     
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized")?
     };
     
@@ -183,7 +183,7 @@ async fn send_chat_message(
         "content": content,
         "timestamp": std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_millis() as u64
     });
     
@@ -222,7 +222,7 @@ async fn start_dm_listener(
     println!("[K2] 🎧 Starting DM listener for: {}", contact_node_id);
     
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized")?
     };
     
@@ -289,7 +289,7 @@ async fn start_dm_listener(
 #[tauri::command]
 async fn share_file(path: String, state: State<'_, AppState>) -> Result<String, String> {
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized")?
     };
     
@@ -306,7 +306,7 @@ async fn share_file(path: String, state: State<'_, AppState>) -> Result<String, 
 #[tauri::command]
 async fn share_bytes(bytes: Vec<u8>, filename: String, state: State<'_, AppState>) -> Result<String, String> {
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized")?
     };
     
@@ -318,7 +318,7 @@ async fn share_bytes(bytes: Vec<u8>, filename: String, state: State<'_, AppState
 #[tauri::command]
 async fn download_file(ticket: String, state: State<'_, AppState>, app: tauri::AppHandle) -> Result<String, String> {
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized")?
     };
     
@@ -384,7 +384,7 @@ async fn join_topic(topic: String, action: String, state: State<'_, AppState>) -
     
     // Get node from state
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized. Please wait for node to start.")?
     };
     
@@ -474,36 +474,41 @@ Trả về JSON theo format:
     Ok(result)
 }
 
-/// Call K2 Endpoint (bypass SSL cert errors)
+/// Call K2 Endpoint for intent classification
+/// NOTE: Requires K2_ENDPOINT env var with a valid HTTPS URL (domain, not raw IP).
+/// Falls back to error if not configured.
 #[tauri::command]
 async fn classify_k2_endpoint(user_prompt: String) -> Result<serde_json::Value, String> {
-    println!("[K2] 🌍 Calling K2 Endpoint (ignoring SSL): {}", user_prompt);
-    
-    // Create client that ignores invalid certs
-    let client = reqwest::Client::builder()
-        .danger_accept_invalid_certs(true)
-        .build()
-        .map_err(|e| e.to_string())?;
+    let endpoint = std::env::var("K2_ENDPOINT")
+        .unwrap_or_default();
 
-    let url = format!("https://139.59.125.159/post?user_input={}", urlencoding::encode(&user_prompt));
-    
+    if endpoint.is_empty() {
+        return Err("K2_ENDPOINT not configured. Set K2_ENDPOINT env var to a valid HTTPS URL.".to_string());
+    }
+
+    // Only allow https:// URLs (no raw IPs without valid cert)
+    if !endpoint.starts_with("https://") {
+        return Err("K2_ENDPOINT must use HTTPS".to_string());
+    }
+
+    let client = reqwest::Client::new();
+    let url = format!("{}/post?user_input={}", endpoint.trim_end_matches('/'), urlencoding::encode(&user_prompt));
+
     let response = client
         .post(&url)
         .send()
         .await
         .map_err(|e| format!("Request failed: {}", e))?;
-    
+
     if !response.status().is_success() {
         return Err(format!("K2 Endpoint error: {}", response.status()));
     }
-    
+
     let text = response.text().await.map_err(|e| e.to_string())?;
-    println!("[K2] 📥 K2 Response: {}", text);
-    
-    // Parse JSON
+
     let result: serde_json::Value = serde_json::from_str(&text)
         .map_err(|e| format!("JSON parse error: {}", e))?;
-        
+
     Ok(result)
 }
 
@@ -515,7 +520,7 @@ async fn broadcast_offer(topic: String, form_data: serde_json::Value, state: Sta
     
     // Get node from state (for node ID)
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized")?
     };
     
@@ -531,7 +536,7 @@ async fn broadcast_offer(topic: String, form_data: serde_json::Value, state: Sta
     payload.insert("timestamp".to_string(), serde_json::Value::Number(
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_secs()
             .into()
     ));
@@ -569,7 +574,7 @@ async fn send_interest(topic: String, seller_node_id: String, form_data: serde_j
     
     // Get node from state (for node ID)
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized")?
     };
     
@@ -586,7 +591,7 @@ async fn send_interest(topic: String, seller_node_id: String, form_data: serde_j
     payload.insert("timestamp".to_string(), serde_json::Value::Number(
         std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
+            .unwrap_or_default()
             .as_secs()
             .into()
     ));
@@ -625,7 +630,7 @@ async fn listen_offers(topic: String, timeout_secs: u64, state: State<'_, AppSta
     
     // Get node from state
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized")?
     };
     
@@ -699,7 +704,7 @@ async fn start_listening(topic: String, app_handle: tauri::AppHandle, state: Sta
     
     // Get node from state
     let node = {
-        let guard = state.node.lock().unwrap();
+        let guard = state.node.lock().map_err(|e| format!("Lock error: {}", e))?;
         guard.clone().ok_or("Node not initialized")?
     };
     
