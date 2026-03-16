@@ -9,14 +9,14 @@ export interface Message {
 export const useGroqChat = () => {
     const [messages, setMessages] = useState<Message[]>([]);
     const [isProcessing, setIsProcessing] = useState(false);
-    // Prioritize env var, then local storage, then empty
+    // Read API key from env only (never store in localStorage)
     const [apiKey, setApiKey] = useState<string>(() =>
-        import.meta.env.VITE_GROQ_API_KEY || localStorage.getItem('GROQ_API_KEY') || ''
+        import.meta.env.VITE_GROQ_API_KEY || ''
     );
 
     const saveApiKey = (key: string) => {
         setApiKey(key);
-        localStorage.setItem('GROQ_API_KEY', key);
+        // Note: key is kept in memory only for this session, not persisted
     };
 
     const sendMessage = useCallback(async (content: string) => {
