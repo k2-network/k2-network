@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { invoke } from "@tauri-apps/api/core";
 import "./Marketplace.css";
 import { MarketplaceTabs, DynamicRequestForm, SkeletonForm, DiscoveryView, NegotiationDashboard } from "../../components/DynamicForm";
 import type { TabType, Candidate } from "../../components/DynamicForm";
@@ -157,12 +158,36 @@ export function MarketplacePage() {
         };
     }, [currentFormData]);  // Depend on currentFormData to get latest value
 
-    const handleFormSubmit = (data: DynamicFormFields) => {
-        console.log("📤 [Marketplace] Form submitted:", data);
-        // TODO: Dispatch to P2P network
-        // For now, emit event for chat to handle
-        window.dispatchEvent(new CustomEvent('k2:formSubmitted', { detail: data }));
-    };
+    const [broadcastStatus, setBroadcastStatus] = useState<"idle" | "broadcasting" | "success" | "error">("idle");
+    const [broadcastMessage, setBroadcastMessage] = useState("");
+
+    const handleFormSubmit = useCallback(async (data: DynamicFormFields) => {
+        console.log("📤 [Marketplace] Form submitted, broadcasting to P2P:", data);
+        setBroadcastStatus("broadcasting");
+        setBroadcastMessage("");
+
+        try {
+            // Join topic + start listening (needed for broadcast channel)
+            await invoke('start_listening', { topic: data.topic });
+            // Broadcast offer to P2P network
+            const offerId = await invoke<string>('broadcast_offer', {
+                topic: data.topic,
+                formData: data,
+            });
+            console.log("✅ [Marketplace] Broadcast OK:", offerId);
+            setBroadcastStatus("success");
+            setBroadcastMessage(`Đã phát lên mạng P2P! ID: ${offerId}`);
+            // Also notify chat
+            window.dispatchEvent(new CustomEvent('k2:formSubmitted', { detail: data }));
+            // Reset after 4s
+            setTimeout(() => setBroadcastStatus("idle"), 4000);
+        } catch (err) {
+            console.error("❌ [Marketplace] Broadcast failed:", err);
+            setBroadcastStatus("error");
+            setBroadcastMessage(String(err));
+            setTimeout(() => setBroadcastStatus("idle"), 4000);
+        }
+    }, []);
 
     const handleFormCancel = () => {
         setFormData(null);
@@ -183,7 +208,22 @@ export function MarketplacePage() {
     };
 
     return (
-        <div className="marketplace-content">
+        <div className="marketplace-content" style={{ position: 'relative' }}>
+            {/* Broadcast Status Toast */}
+            {broadcastStatus !== "idle" && (
+                <div style={{
+                    position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
+                    background: broadcastStatus === "success" ? "#1a2e1a" : broadcastStatus === "error" ? "#2e1a1a" : "#1a1a2e",
+                    border: `1px solid ${broadcastStatus === "success" ? "#47E069" : broadcastStatus === "error" ? "#FF6B6B" : "#4DA6FF"}`,
+                    borderRadius: 10, padding: "12px 18px", maxWidth: 320,
+                    color: broadcastStatus === "success" ? "#47E069" : broadcastStatus === "error" ? "#FF6B6B" : "#4DA6FF",
+                    fontSize: 13, fontWeight: 500,
+                }}>
+                    {broadcastStatus === "broadcasting" && "📡 Đang broadcast lên mạng P2P..."}
+                    {broadcastStatus === "success" && `✅ ${broadcastMessage}`}
+                    {broadcastStatus === "error" && `❌ Lỗi: ${broadcastMessage}`}
+                </div>
+            )}
             {/* Tab Navigation */}
             <MarketplaceTabs activeTab={activeTab} onTabChange={setActiveTab} />
 

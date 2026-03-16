@@ -219,27 +219,54 @@ Sử dụng sau khi đã phân tích intent và người dùng xác nhận muố
         console.log("🚀 [K2 Tool] createTradeRequest START", { input });
 
         try {
-            // TODO: Implement actual trade request creation via P2P network
-            // For now, return mock success
-            const requestId = `K2-${Date.now().toString(36).toUpperCase()}`;
+            const { invoke } = await import('@tauri-apps/api/core');
+
+            // Build form data matching P2P payload format
+            const formData = {
+                topic: input.topic,
+                action: input.action,
+                title: input.title,
+                description: input.description,
+                priceRange: input.price
+                    ? { min: input.price, max: input.price, currency: "VND" }
+                    : { min: 0, max: 0, currency: "VND" },
+                selection: input.topic === "Freelance Job"
+                    ? { category: input.category || "", skill: input.skill || "" }
+                    : { subtopic: input.subtopic || "" },
+            };
+
+            // 1. Join topic + start listening (needed before broadcast)
+            await invoke('start_listening', { topic: input.topic });
+
+            // 2. Broadcast offer to P2P network
+            const offerId = await invoke<string>('broadcast_offer', {
+                topic: input.topic,
+                formData,
+            });
+
+            console.log("✅ [K2 Tool] createTradeRequest broadcast OK, offerId:", offerId);
+
+            const categoryDisplay = input.topic === "Freelance Job"
+                ? `${input.category} > ${input.skill}`
+                : input.subtopic;
 
             const response = `
-✅ **Đã tạo yêu cầu giao dịch thành công!**
+✅ **Đã phát yêu cầu giao dịch lên mạng P2P!**
 
-**ID:** ${requestId}
+**ID:** ${offerId}
 **Tiêu đề:** ${input.title}
 **Loại:** ${input.action.toUpperCase()}
-**Danh mục:** ${input.topic} > ${input.subtopic || `${input.category} > ${input.skill}`}
+**Danh mục:** ${input.topic} > ${categoryDisplay}
 **Mô tả:** ${input.description}
 ${input.price ? `**Giá:** ${input.price.toLocaleString()} VND` : "**Giá:** Thương lượng"}
 
-📢 Yêu cầu của bạn đã được phát lên mạng P2P. Bạn sẽ nhận được thông báo khi có người quan tâm.
+📢 Yêu cầu đã được broadcast lên mạng P2P. Bạn sẽ nhận thông báo khi có người quan tâm.
 `;
             return response;
 
         } catch (error) {
             console.error("🔥 [K2 Tool] createTradeRequest ERROR:", error);
-            return `❌ Không thể tạo yêu cầu: ${error instanceof Error ? error.message : "Unknown error"}`;
+            return `❌ Không thể tạo yêu cầu: ${error instanceof Error ? error.message : String(error)}`;
         }
     },
 
@@ -275,26 +302,74 @@ Sử dụng khi người dùng muốn tìm kiếm, xem danh sách, hoặc khám 
         console.log("🚀 [K2 Tool] searchMarketplace START", { input });
 
         try {
-            // TODO: Implement actual search via P2P network
-            // For now, return mock results
-            const response = `
+            const { invoke } = await import('@tauri-apps/api/core');
+
+            const searchTopics = input.topic
+                ? [input.topic]
+                : ["Digital Assets", "Goods", "Freelance Job"];
+
+            const allOffers: any[] = [];
+
+            // Listen on each topic for 5s each
+            for (const topic of searchTopics) {
+                try {
+                    await invoke('start_listening', { topic });
+                    const offers = await invoke<any[]>('listen_offers', {
+                        topic,
+                        timeoutSecs: 5,
+                    });
+                    allOffers.push(...offers);
+                } catch (e) {
+                    console.warn(`[searchMarketplace] Failed to search topic ${topic}:`, e);
+                }
+            }
+
+            // Filter by query keyword (case insensitive)
+            const q = input.query.toLowerCase();
+            const matched = allOffers.filter(offer => {
+                const fd = offer.form_data || offer;
+                const title = (fd.title || "").toLowerCase();
+                const desc = (fd.description || "").toLowerCase();
+                const topic = (offer.topic || fd.topic || "").toLowerCase();
+                return title.includes(q) || desc.includes(q) || topic.includes(q);
+            });
+
+            if (matched.length === 0) {
+                return `
 🔍 **Kết quả tìm kiếm: "${input.query}"**
 ${input.topic ? `(Trong danh mục: ${input.topic})` : ""}
 
-**Không tìm thấy kết quả phù hợp.**
+**Không tìm thấy kết quả phù hợp trên mạng P2P lúc này.**
 
 💡 **Gợi ý:**
-- Thử tìm với từ khóa khác
-- Mở rộng phạm vi tìm kiếm
-- Tạo yêu cầu mua để người bán liên hệ với bạn
+- Thử lại sau khi có nhiều người dùng online hơn
+- Tạo yêu cầu mua để người bán tự tìm đến bạn
+- Thử mở rộng từ khóa tìm kiếm
 
 Bạn có muốn tạo yêu cầu tìm kiếm không?
 `;
-            return response;
+            }
+
+            const resultLines = matched.slice(0, 5).map((offer, i) => {
+                const fd = offer.form_data || offer;
+                const nodeShort = (offer.sender_node_id || "unknown").slice(0, 8);
+                const price = fd.priceRange
+                    ? `${fd.priceRange.min?.toLocaleString()} - ${fd.priceRange.max?.toLocaleString()} ${fd.priceRange.currency || 'VND'}`
+                    : "Thương lượng";
+                return `**${i + 1}. ${fd.title || "Không có tiêu đề"}**\n   Người bán: ${nodeShort}... | Giá: ${price}\n   ${fd.description || ""}`;
+            }).join("\n\n");
+
+            return `
+🔍 **Kết quả tìm kiếm: "${input.query}"** — Tìm thấy ${matched.length} kết quả trên P2P
+
+${resultLines}
+
+Bạn có muốn gửi interest đến người bán nào không?
+`;
 
         } catch (error) {
             console.error("🔥 [K2 Tool] searchMarketplace ERROR:", error);
-            return `❌ Lỗi tìm kiếm: ${error instanceof Error ? error.message : "Unknown error"}`;
+            return `❌ Lỗi tìm kiếm: ${error instanceof Error ? error.message : String(error)}`;
         }
     },
 
