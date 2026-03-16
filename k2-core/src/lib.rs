@@ -12,9 +12,9 @@ use anyhow::{Context, Result};
 use iroh::{
     discovery::pkarr::dht::DhtDiscovery,
     protocol::Router,
-    Endpoint, EndpointId, SecretKey,
+    Endpoint, SecretKey,
 };
-use iroh_blobs::{store::mem::MemStore, BlobsProtocol, ticket::BlobTicket, HashAndFormat};
+use iroh_blobs::{store::mem::MemStore, BlobsProtocol, ticket::BlobTicket};
 use iroh_gossip::{
     net::{Gossip, GOSSIP_ALPN},
     proto::TopicId,
@@ -24,10 +24,6 @@ use iroh_docs::{
     protocol::Docs,
     NamespaceId,
     ALPN as DOCS_ALPN,
-};
-use iroh_content_discovery::{
-    announce, query,
-    protocol::{AbsoluteTime, Announce, AnnounceKind, Query, QueryFlags, SignedAnnounce, ALPN as DISCOVERY_ALPN},
 };
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -39,8 +35,6 @@ use iroh_gossip::api::GossipSender;
 use tokio::sync::Mutex as TokioMutex;
 mod docs;
 pub use docs::*;
-// Default tracker ID (same as example 12)
-pub const DEFAULT_TRACKER: &str = "71853750efc1219d7976639087c5fb25cf8d4b49f6d509366f2e094a3f781623";
 
 // ============================================
 // CONTACT BOOK (Legacy JSON - for backwards compatibility)
@@ -307,7 +301,6 @@ impl K2Node {
             .alpns(vec![
                 iroh_blobs::ALPN.to_vec(), 
                 GOSSIP_ALPN.to_vec(), 
-                DISCOVERY_ALPN.to_vec(),
                 DOCS_ALPN.to_vec(),
             ])
             .bind()
@@ -464,68 +457,12 @@ impl K2Node {
         }
     }
 
-    /// Subscribe to topic WITH tracker-based peer discovery (like example 12)
-    /// 1. Query tracker for existing peers on this topic
-    /// 2. Announce ourselves on tracker
-    /// 3. Subscribe and join with found peers
+    /// Subscribe to topic with DHT-based peer discovery
     pub async fn subscribe_topic_with_discovery(&self, topic_id: TopicId) -> Result<GossipTopic> {
-        let my_id = self.secret_key.public();
-        
-        // Parse tracker ID
-        let tracker_bytes = hex::decode(DEFAULT_TRACKER).context("Invalid tracker hex")?;
-        let tracker_arr: [u8; 32] = tracker_bytes.try_into().map_err(|_| anyhow::anyhow!("Invalid tracker length"))?;
-        let tracker_id = iroh::PublicKey::from_bytes(&tracker_arr)?;
-        
-        // Convert topic_id to hash for content discovery
-        let topic_hash = HashAndFormat::raw(iroh_blobs::Hash::new(topic_id.as_bytes()));
-        
-        println!("[K2] 🔍 Querying tracker for peers on topic...");
-        
-        // Query tracker for existing peers
-        let query_args = Query {
-            content: topic_hash,
-            flags: QueryFlags { complete: false, verified: false },
-        };
-        
-        let mut peers = vec![];
-        if let Ok(announcements) = query(&self.endpoint, tracker_id, query_args).await {
-            for ann in announcements {
-                if ann.host != EndpointId::from(my_id) {
-                    peers.push(ann.host);
-                }
-            }
-        }
-        println!("[K2] 📡 Found {} peers from tracker", peers.len());
-        
-        // Announce ourselves on tracker
-        let announce_msg = Announce {
-            host: EndpointId::from(my_id),
-            content: topic_hash,
-            kind: AnnounceKind::Complete,
-            timestamp: AbsoluteTime::now(),
-        };
-        let signed = SignedAnnounce::new(announce_msg, &self.secret_key)?;
-        let _ = announce(&self.endpoint, tracker_id, signed).await;
-        println!("[K2] 📢 Announced ourselves on tracker");
-        
-        // Convert EndpointId to PublicKey for gossip
-        let peer_keys: Vec<iroh::PublicKey> = peers.iter()
-            .filter_map(|eid| {
-                // EndpointId contains PublicKey
-                let bytes = eid.as_bytes();
-                iroh::PublicKey::from_bytes(bytes).ok()
-            })
-            .take(10) // Max 10 peers
-            .collect();
-        
-        // Subscribe and join with found peers
-        if peer_keys.is_empty() {
-            println!("[K2] 🌐 No peers found, subscribing solo (waiting for others)...");
-            self.subscribe_topic(topic_id).await
-        } else {
-            println!("[K2] 🤝 Joining gossip with {} peers...", peer_keys.len());
-            self.join_topic(topic_id, peer_keys).await
-        }
+        // DHT discovery is built into the endpoint via DhtDiscovery
+        // Just subscribe directly; peers will be found via DHT automatically
+        println!("[K2] Subscribing to topic via DHT discovery...");
+        self.subscribe_topic(topic_id).await
     }
 
     /// Subscribe to a topic and cache the sender for later broadcasting
