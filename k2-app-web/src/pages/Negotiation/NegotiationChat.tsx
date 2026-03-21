@@ -14,7 +14,6 @@ import {
     addContact as apiAddContact,
     removeContact as apiRemoveContact,
     pingContact,
-    sendChatMessage as apiSendChatMessage,
     sendP2pMessage as apiSendP2pMessage,
     k2ws,
 } from '../../api';
@@ -353,46 +352,43 @@ export const NegotiationChat: React.FC<NegotiationChatProps> = ({ openChatWith, 
     const handleSendMessage = async () => {
         if (!inputMessage.trim() || !selectedContact) return;
 
+        const timestamp = Date.now();
+        // ID nhất quán với incoming message format: timestamp-senderId
+        const msgId = `${timestamp}-${sessionId}`;
+        const content = inputMessage.trim();
+
         const msg: ChatMessage = {
-            id: `${Date.now()}-${Math.random()}`,
+            id: msgId,
             senderId: myNodeId,
             senderName: 'Me',
-            content: inputMessage.trim(),
-            timestamp: Date.now(),
+            content,
+            timestamp,
             isMe: true,
         };
 
-        // Add to local messages
+        // Add to local messages trước
         setMessages(prev => {
             const newMap = new Map(prev);
             const existing = newMap.get(selectedContact.node_id) || [];
+            // Guard chống double-click
+            if (existing.some(m => m.id === msgId)) return prev;
             newMap.set(selectedContact.node_id, [...existing, msg]);
             return newMap;
         });
 
-        // Try P2P first, fallback to server relay
+        setInputMessage('');
+
+        // Gửi P2P — không fallback relay để tránh duplicate
         try {
             await apiSendP2pMessage(
                 selectedContact.node_id,
-                inputMessage.trim(),
+                content,
                 sessionId,
                 user?.username ?? 'Guest',
             );
-        } catch (p2pErr) {
-            console.warn('P2P send failed, falling back to relay:', p2pErr);
-            try {
-                await apiSendChatMessage(
-                    selectedContact.node_id,
-                    inputMessage.trim(),
-                    sessionId,
-                    user?.username ?? 'Guest',
-                );
-            } catch (err) {
-                console.error('Failed to send message:', err);
-            }
+        } catch (err) {
+            console.error('P2P send failed:', err);
         }
-
-        setInputMessage('');
     };
 
     // Add new contact

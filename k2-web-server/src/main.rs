@@ -4,7 +4,8 @@ mod ws;
 
 use std::sync::Arc;
 use axum::{routing::get, Router};
-use tower_http::cors::{Any, CorsLayer};
+use tower_http::cors::{AllowOrigin, Any, CorsLayer};
+use axum::http::{HeaderValue, Method};
 
 #[tokio::main]
 async fn main() {
@@ -12,9 +13,15 @@ async fn main() {
 
     let (app_state, _initial_rx) = state::AppState::new();
 
+    let allowed_origins: Vec<HeaderValue> = std::env::var("ALLOWED_ORIGINS")
+        .unwrap_or_else(|_| "http://localhost:5173,http://localhost:3000,https://k2team.xyz,https://www.k2team.xyz".to_string())
+        .split(',')
+        .filter_map(|s| s.trim().parse().ok())
+        .collect();
+
     let cors = CorsLayer::new()
-        .allow_origin(Any)
-        .allow_methods(Any)
+        .allow_origin(AllowOrigin::list(allowed_origins))
+        .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers(Any);
 
     let app = Router::new()
