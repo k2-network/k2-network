@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "k2-core",
-    "k2-app-tauri/src-tauri"
+    "k2-app-tauri/src-tauri",
+    "k2-web-server"
 ]
 resolver = "2"

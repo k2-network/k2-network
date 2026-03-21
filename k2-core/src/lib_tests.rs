@@ -114,57 +114,68 @@ async fn test_marketplace_message_integrity() -> Result<()> {
 async fn benchmark_multi_node_marketplace_flow() -> Result<()> {
     let topic_name = format!("market-bench-{}", iroh::SecretKey::generate(&mut rand::rng()).public());
     let topic_id = K2Marketplace::topic_to_id(&topic_name);
-    
+
     println!("\n=== ĐO LƯỜNG CHU TRÌNH MARKETPLACE (3 NODES) ===");
-    
-    let mut nodes = Vec::new();
-    let mut receivers = Vec::new();
 
-    // 1. GIA NHẬP MẠNG (Discovery Phase)
-    for i in 1..=3 {
-        let node = K2Node::new().await?;
-        let start = Instant::now();
-        
-        // Subscribe và lấy receiver để đo tin nhắn
-        let gossip_topic = node.subscribe_topic_with_discovery(topic_id).await?;
-        let (_, rx) = gossip_topic.split();
-        
-        println!("Node #{} Join: {:?}ms", i, start.elapsed().as_millis());
-        nodes.push(node);
-        receivers.push(rx);
-        
-        tokio::time::sleep(Duration::from_millis(1000)).await;
+    // Tạo 3 nodes
+    let node1 = K2Node::new().await?;
+    let node2 = K2Node::new().await?;
+    let node3 = K2Node::new().await?;
+
+    // Lấy public key của node1 để làm bootstrap peer
+    let node1_id = node1.endpoint.addr().id;
+    let node2_id = node2.endpoint.addr().id;
+
+    // Node1 subscribe trước (không có peer)
+    let t1 = node1.gossip.subscribe(topic_id, vec![]).await?;
+    let (sender1, _rx1) = t1.split();
+    node1.cache_sender(topic_id, sender1).await;
+    println!("Node #1 subscribed (bootstrap)");
+
+    // Chờ node1 ready
+    tokio::time::sleep(Duration::from_millis(500)).await;
+
+    // Node2 join với node1 làm peer
+    let t2 = node2.gossip.subscribe_and_join(topic_id, vec![node1_id]).await?;
+    let (_sender2, mut rx2) = t2.split();
+    println!("Node #2 joined via Node #1");
+
+    // Node3 join với node1 và node2
+    let t3 = node3.gossip.subscribe_and_join(topic_id, vec![node1_id, node2_id]).await?;
+    let (_sender3, mut rx3) = t3.split();
+    println!("Node #3 joined via Node #1 + #2");
+
+    // Chờ gossip mesh hình thành
+    tokio::time::sleep(Duration::from_millis(1000)).await;
+
+    // Node1 broadcast
+    println!("\n--- Broadcast từ Node #1 ---");
+    let payload = b"OFFER_DATA_XYZ_123";
+    let start = Instant::now();
+    node1.broadcast_message(topic_id, payload.to_vec()).await?;
+    println!("Node #1 broadcast xong");
+
+    // Đợi Node2 và Node3 nhận
+    let mut received = 0;
+    let r2 = tokio::time::timeout(Duration::from_secs(5), rx2.next()).await;
+    if matches!(r2, Ok(Some(Ok(_)))) {
+        println!("Node #2 nhan duoc sau {}ms", start.elapsed().as_millis());
+        received += 1;
+    } else {
+        println!("Node #2 timeout");
     }
 
-    // 2. LAN TRUYỀN TIN NHẮN (Gossip Phase)
-    println!("\n--- Đo lường độ trễ lan truyền tin nhắn ---");
-    let ping_payload = b"OFFER_DATA_XYZ_123";
-    let start_broadcast = Instant::now();
-    
-    // Node 1 phát tán một "Offer"
-    nodes[0].broadcast_message(topic_id, ping_payload.to_vec()).await?;
-    println!("Node #1 đã phát tin nhắn (Broadcast)");
-
-    // Đợi Node 2 và 3 nhận được
-    let mut received_count = 0;
-    for i in 1..3 {
-        let mut rx = receivers.remove(1); 
-        let node_idx = i + 1;
-        
-        match tokio::time::timeout(Duration::from_secs(5), rx.next()).await {
-            Ok(Some(Ok(_event))) => {
-                let latency = start_broadcast.elapsed().as_millis();
-                println!("Node #{} nhận được tin nhắn sau: {}ms", node_idx, latency);
-                received_count += 1;
-            },
-            _ => println!("Node #{} không nhận được tin nhắn (Timeout)", node_idx),
-        }
+    let r3 = tokio::time::timeout(Duration::from_secs(5), rx3.next()).await;
+    if matches!(r3, Ok(Some(Ok(_)))) {
+        println!("Node #3 nhan duoc sau {}ms", start.elapsed().as_millis());
+        received += 1;
+    } else {
+        println!("Node #3 timeout");
     }
 
-    println!("\n=== TỔNG KẾT HIỆU NĂNG ===");
-    println!("Tỷ lệ nhận tin: {}/2", received_count);
-    println!("Độ trễ trung bình: ... ms"); // Bạn có thể tính toán từ kết quả trên
-    println!("===========================================\n");
+    println!("\n=== KET QUA ===");
+    println!("Ti le nhan: {}/2", received);
+    assert!(received > 0, "Gossip khong hoat dong - 0/2 nodes nhan duoc message");
 
     Ok(())
 }

@@ -20,7 +20,7 @@
       }
     ],
     "security": {
-      "csp": null
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval'; connect-src 'self' https://api.tambo.co https://api.groq.com https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: asset: https:; script-src 'self' 'unsafe-inline' 'unsafe-eval'"
     }
   },
   "bundle": {

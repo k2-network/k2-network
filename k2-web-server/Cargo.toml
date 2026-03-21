@@ -1,0 +1,27 @@
+[package]
+name = "k2-web-server"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "k2-web-server"
+path = "src/main.rs"
+
+[dependencies]
+k2-core = { path = "../k2-core" }
+tokio = { version = "1", features = ["full"] }
+axum = { version = "0.7", features = ["multipart", "ws"] }
+tower-http = { version = "0.5", features = ["cors"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+anyhow = "1"
+iroh = "0.95"
+iroh-gossip = "0.95.0"
+futures-util = "0.3"
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+qrcode = "0.14"
+base64 = { version = "0.22", features = ["std"] }
+hex = "0.4"
+urlencoding = "2"
+directories = "6.0"
+bytes = "1"

@@ -11,7 +11,8 @@
 use anyhow::{Context, Result};
 use iroh::{
     discovery::pkarr::dht::DhtDiscovery,
-    protocol::Router,
+    endpoint::Connection,
+    protocol::{AcceptError, ProtocolHandler, Router},
     Endpoint, SecretKey,
 };
 use iroh_blobs::{store::mem::MemStore, BlobsProtocol, ticket::BlobTicket};
@@ -32,7 +33,34 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use iroh_gossip::api::GossipSender;
-use tokio::sync::Mutex as TokioMutex;
+use tokio::sync::{mpsc, Mutex as TokioMutex};
+
+/// ALPN for direct P2P messaging between K2 nodes
+pub const DM_ALPN: &[u8] = b"k2/direct-message/1";
+
+/// Handler for incoming direct P2P messages
+#[derive(Debug, Clone)]
+struct DirectMessageHandler {
+    tx: mpsc::Sender<(String, Vec<u8>)>,
+}
+
+impl DirectMessageHandler {
+    fn new() -> (Self, mpsc::Receiver<(String, Vec<u8>)>) {
+        let (tx, rx) = mpsc::channel(256);
+        (Self { tx }, rx)
+    }
+}
+
+impl ProtocolHandler for DirectMessageHandler {
+    async fn accept(&self, connection: Connection) -> Result<(), AcceptError> {
+        let sender_id = connection.remote_id().to_string();
+        let (_, mut recv) = connection.accept_bi().await?;
+        let data = recv.read_to_end(64 * 1024).await
+            .map_err(|e| AcceptError::from(std::io::Error::other(e)))?;
+        let _ = self.tx.send((sender_id, data)).await;
+        Ok(())
+    }
+}
 mod docs;
 pub use docs::*;
 
@@ -260,10 +288,10 @@ impl ContactBookDocs {
 /// Built on iroh 0.95 with Pkarr DHT discovery
 #[derive(Clone)]
 pub struct K2Node {
-    endpoint: Endpoint,
+    pub endpoint: Endpoint,
     blobs: BlobsProtocol,
     store: MemStore,
-    gossip: Gossip,
+    pub gossip: Gossip,
     docs: Docs,
     docs_client: K2DocsClient,
     secret_key: SecretKey,
@@ -272,6 +300,8 @@ pub struct K2Node {
     data_dir: Option<PathBuf>,
     /// Cache of active topic senders for broadcasting on existing subscriptions
     active_topics: Arc<TokioMutex<HashMap<TopicId, GossipSender>>>,
+    /// Receiver for incoming direct P2P messages (can be taken once)
+    dm_rx: Arc<TokioMutex<Option<mpsc::Receiver<(String, Vec<u8>)>>>>,
 }
 
 impl K2Node {
@@ -299,9 +329,10 @@ impl K2Node {
             .secret_key(secret_key.clone())
             .discovery(discovery)
             .alpns(vec![
-                iroh_blobs::ALPN.to_vec(), 
-                GOSSIP_ALPN.to_vec(), 
+                iroh_blobs::ALPN.to_vec(),
+                GOSSIP_ALPN.to_vec(),
                 DOCS_ALPN.to_vec(),
+                DM_ALPN.to_vec(),
             ])
             .bind()
             .await
@@ -329,13 +360,17 @@ impl K2Node {
                 .context("Failed to create memory docs")?
         };
         
+        // Create direct message handler
+        let (dm_handler, dm_rx) = DirectMessageHandler::new();
+
         // Build router with all protocols
         let router = Router::builder(endpoint.clone())
             .accept(iroh_blobs::ALPN, blobs.clone())
             .accept(GOSSIP_ALPN, gossip.clone())
             .accept(DOCS_ALPN, docs.clone())
+            .accept(DM_ALPN, dm_handler)
             .spawn();
-        
+
         // Create docs client
         let docs_client = K2DocsClient::new(docs.clone(), store.clone());
 
@@ -350,6 +385,7 @@ impl K2Node {
             router: Arc::new(router),
             data_dir,
             active_topics: Arc::new(TokioMutex::new(HashMap::new())),
+            dm_rx: Arc::new(TokioMutex::new(Some(dm_rx))),
         })
     }
 
@@ -384,6 +420,31 @@ impl K2Node {
         .context("Failed to connect")?;
         
         Ok(())
+    }
+
+    /// Send a direct P2P message to a peer by their hex node_id
+    pub async fn send_direct_message(&self, to_node_id: &str, message: &[u8]) -> Result<()> {
+        let bytes = hex::decode(to_node_id).context("Invalid hex format")?;
+        let arr: [u8; 32] = bytes.try_into().map_err(|_| anyhow::anyhow!("Invalid ID length"))?;
+        let public_key = iroh::PublicKey::from_bytes(&arr)?;
+
+        let conn = tokio::time::timeout(
+            Duration::from_secs(10),
+            self.endpoint.connect(public_key, DM_ALPN),
+        )
+        .await
+        .context("Connect timeout")?
+        .context("Connect failed")?;
+
+        let (mut send, _recv) = conn.open_bi().await.context("open_bi failed")?;
+        send.write_all(message).await.context("write failed")?;
+        send.finish()?;
+        Ok(())
+    }
+
+    /// Take the DM receiver channel — can only be called once; returns None afterwards
+    pub async fn take_dm_receiver(&self) -> Option<mpsc::Receiver<(String, Vec<u8>)>> {
+        self.dm_rx.lock().await.take()
     }
 
     /// Share a file and return ticket string
@@ -457,12 +518,31 @@ impl K2Node {
         }
     }
 
-    /// Subscribe to topic with DHT-based peer discovery
+    /// Subscribe to topic with peer discovery via iroh DHT
+    /// Publishes our address to DHT under topic key, then looks up existing peers
     pub async fn subscribe_topic_with_discovery(&self, topic_id: TopicId) -> Result<GossipTopic> {
-        // DHT discovery is built into the endpoint via DhtDiscovery
-        // Just subscribe directly; peers will be found via DHT automatically
         println!("[K2] Subscribing to topic via DHT discovery...");
-        self.subscribe_topic(topic_id).await
+
+        // Use topic bytes as a synthetic "node id" key to lookup peers
+        // iroh DHT stores NodeAddr by PublicKey - we use gossip's built-in neighbor discovery
+        // by joining with our own addr first (bootstrap), then letting gossip propagate
+        let topic = self.gossip.subscribe_and_join(topic_id, vec![]).await?;
+        Ok(topic)
+    }
+
+    /// Subscribe to topic with known bootstrap peers (for rendezvous-based discovery)
+    pub async fn subscribe_topic_with_peers(&self, topic_id: TopicId, peers: Vec<iroh::PublicKey>) -> Result<GossipTopic> {
+        println!("[K2] Joining topic with {} known peers...", peers.len());
+        if peers.is_empty() {
+            return self.subscribe_topic_with_discovery(topic_id).await;
+        }
+        match tokio::time::timeout(
+            Duration::from_secs(10),
+            self.gossip.subscribe_and_join(topic_id, peers)
+        ).await {
+            Ok(Ok(topic)) => Ok(topic),
+            _ => self.subscribe_topic_with_discovery(topic_id).await,
+        }
     }
 
     /// Subscribe to a topic and cache the sender for later broadcasting

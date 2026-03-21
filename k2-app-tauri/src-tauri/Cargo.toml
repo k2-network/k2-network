@@ -29,7 +29,9 @@ serde_json = "1"
 k2-core = { path = "../../k2-core" }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
+iroh = "0.95"
 iroh-gossip = "0.95.0"
+hex = "0.4"
 futures-util = "0.3"
 
 # HTTP client for API calls (no CORS in backend)

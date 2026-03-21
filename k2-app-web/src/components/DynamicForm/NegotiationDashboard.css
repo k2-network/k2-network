@@ -1,0 +1,486 @@
+/**
+ * NegotiationDashboard Styles
+ */
+
+.negotiation-dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 0;
+}
+
+/* Header */
+.negotiation-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.header-info h2 {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.87);
+    margin: 0 0 4px 0;
+}
+
+.header-info p {
+    font-family: 'Raleway', sans-serif;
+    font-size: 13px;
+    color: #858585;
+    margin: 0;
+}
+
+.header-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.start-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #4DA6FF 0%, #00A8FF 100%);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.start-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(77, 166, 255, 0.4);
+}
+
+.start-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.back-btn {
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid #3c3c3c;
+    border-radius: 8px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #858585;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+    border-color: #555;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+/* Progress Bar */
+.negotiation-progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.negotiation-progress .progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #3c3c3c;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.negotiation-progress .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4DA6FF 0%, #47E069 100%);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.negotiation-progress .progress-text {
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    color: #858585;
+    min-width: 50px;
+    text-align: right;
+}
+
+/* Rankings Container */
+.rankings-container {
+    background: #1F1F24;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.rankings-header {
+    display: grid;
+    grid-template-columns: 70px 1fr 140px 130px 90px 100px;
+    gap: 20px;
+    padding: 14px 24px;
+    background: #2d2d30;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    color: #858585;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rankings-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+/* Ranking Row */
+.ranking-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 140px 130px 90px 100px;
+    gap: 20px;
+    padding: 16px 24px;
+    border-bottom: 1px solid #2d2d30;
+    transition: all 0.3s ease;
+    align-items: center;
+}
+
+.ranking-row:last-child {
+    border-bottom: none;
+}
+
+.ranking-row:hover {
+    background: rgba(77, 166, 255, 0.05);
+}
+
+.ranking-row.negotiating {
+    background: rgba(77, 166, 255, 0.1);
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+}
+
+/* Rank Badge */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    background: #2d2d30;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.rank-badge.rank-1 {
+    background: #3c3c3c;
+    color: rgba(255, 255, 255, 0.87);
+    font-weight: 700;
+}
+
+.rank-badge.rank-2 {
+    background: #3c3c3c;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.rank-badge.rank-3 {
+    background: #3c3c3c;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+/* Candidate Column */
+.col-candidate {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.ranking-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.ranking-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 0;
+}
+
+.ranking-name {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.87);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    margin-bottom: 2px;
+}
+
+.ranking-title {
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    color: #858585;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.ranking-notes {
+    font-family: 'Raleway', sans-serif;
+    font-size: 11px;
+    color: #4DA6FF;
+    margin-top: 2px;
+    line-height: 1.3;
+}
+
+/* Price Column */
+.col-price {
+    font-family: 'Raleway', sans-serif;
+    font-size: 13px;
+    color: #858585;
+    font-weight: 500;
+}
+
+/* Status Column */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border-radius: 6px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-dot {
+    display: none;
+}
+
+.status-badge.pending {
+    color: #858585;
+}
+
+.status-badge.negotiating {
+    color: #4DA6FF;
+}
+
+.status-badge.completed {
+    color: #cccccc;
+}
+
+.status-badge.failed {
+    color: #FF6B6B;
+}
+
+/* Score Column */
+.score-display {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+}
+
+.score-value {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.score-value.high {
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.score-value.medium {
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.score-value.low {
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.score-max {
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    color: #858585;
+}
+
+.score-pending {
+    font-family: 'Raleway', sans-serif;
+    font-size: 14px;
+    color: #858585;
+}
+
+.score-loading {
+    width: 50px;
+    height: 6px;
+    background: #3c3c3c;
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.loading-bar {
+    height: 100%;
+    width: 40%;
+    background: linear-gradient(90deg, #4DA6FF, #00C8FF);
+    border-radius: 3px;
+    animation: loadingMove 1s ease-in-out infinite;
+}
+
+@keyframes loadingMove {
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(200%);
+    }
+}
+
+/* Action Column */
+.chat-open-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: linear-gradient(135deg, #4DA6FF 0%, #00A8FF 100%);
+    border: none;
+    border-radius: 6px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chat-open-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(77, 166, 255, 0.4);
+}
+
+.copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: #2d2d30;
+    border: 1px solid #3c3c3c;
+    border-radius: 6px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    color: #858585;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.copy-btn:hover {
+    background: #3c3c3c;
+    color: rgba(255, 255, 255, 0.87);
+    border-color: #555;
+}
+
+.copy-btn.copied {
+    background: rgba(71, 224, 105, 0.15);
+    border-color: #47E069;
+    color: #47E069;
+}
+
+/* Empty State */
+.empty-state {
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    background: #1F1F24;
+    border-radius: 12px;
+}
+
+.empty-state p {
+    margin: 16px 0 8px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.empty-state span {
+    font-family: 'Raleway', sans-serif;
+    font-size: 14px;
+    color: #858585;
+}
+
+/* Responsive */
+@media (max-width: 1000px) {
+
+    .rankings-header,
+    .ranking-row {
+        grid-template-columns: 50px 1fr 100px 80px;
+    }
+
+    .col-price,
+    .col-action {
+        display: none;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .rankings-header,
+    .ranking-row {
+        grid-template-columns: 40px 1fr 70px;
+    }
+
+    .col-status {
+        display: none;
+    }
+
+    .negotiation-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .header-actions {
+        justify-content: stretch;
+    }
+
+    .start-btn,
+    .back-btn {
+        flex: 1;
+        justify-content: center;
+    }
+}

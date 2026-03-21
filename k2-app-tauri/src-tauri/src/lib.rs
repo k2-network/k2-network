@@ -415,25 +415,31 @@ async fn classify_intent(user_prompt: String, api_key: String, base_url: Option<
     
     let client = reqwest::Client::new();
     
-    let system_prompt = r#"Bạn là AI phân tích yêu cầu mua bán trên K2 Marketplace. Phân tích ý định của người dùng và trích xuất thông tin.
+    let system_prompt = r#"Bạn là classifier phân tích ý định người dùng trên K2 Marketplace.
 
-Các topic:
-- "Digital Assets": Video, Images, Audio, Token, License | Key | Secret, Document, Source Code, Dataset
-- "Goods": Fashion, Electronics & Devices, Books & Learning, Sports & Travel  
-- "Freelance Job": Tech & IT, Design & Creative, Writing & Translation, Marketing & Sales
-
-Các action:
-- "buy": Người dùng muốn MUA
-- "sell": Người dùng muốn BÁN
-- "exchange": Người dùng muốn TRAO ĐỔI
-
-Trả về JSON theo format:
+Trả về JSON CHÍNH XÁC theo schema sau, không thêm bất kỳ field nào khác:
 {
-  "topic": "Digital Assets" | "Goods" | "Freelance Job",
-  "selection": { "subtopic": "..." } hoặc { "category": "...", "skill": "..." },
-  "action": "buy" | "sell" | "exchange",
-  "description": "mô tả yêu cầu"
-}"#;
+  "action": "buy" | "sell" | "exchange" | "none",
+  "topic": "Digital Assets" | "Goods" | "Freelance Job" | null,
+  "subtopic": string | null,
+  "category": string | null,
+  "skill": string | null,
+  "title": string,
+  "description": string,
+  "needs_search": boolean
+}
+
+Subtopic hợp lệ:
+- Digital Assets: Video, Images, Audio, Token, License | Key | Secret, Document, Source Code, Dataset
+- Goods: Fashion, Electronics & Devices, Books & Learning, Sports & Travel
+- Freelance Job category: Tech & IT, Design & Creative, Writing & Translation, Marketing & Sales
+
+Quy tắc:
+- action="none" nếu chỉ hỏi thông tin
+- needs_search=true CHỈ KHI có từ "tìm", "xem", "có ai", "danh sách", "list"
+- needs_search=false khi muốn MUA/BÁN/TRAO ĐỔI (tạo yêu cầu giao dịch mới)
+- title: tóm tắt ngắn gọn
+- null cho field không xác định được"#;
 
     let request_body = serde_json::json!({
         "model": model,
@@ -708,10 +714,29 @@ async fn start_listening(topic: String, app_handle: tauri::AppHandle, state: Sta
         guard.clone().ok_or("Node not initialized")?
     };
     
-    // Subscribe to topic with Discovery (Tracker)
+    // Subscribe to topic - use contacts as bootstrap peers
     let topic_id = K2Marketplace::topic_to_id(&topic);
-    println!("[K2] 🔍 Connecting to tracker and peers...");
-    let gossip_topic = node.subscribe_topic_with_discovery(topic_id).await.map_err(|e| e.to_string())?;
+    println!("[K2] 🔍 Joining topic with contacts as peers...");
+
+    // Load contacts to use as bootstrap peers for gossip
+    let peer_keys: Vec<iroh::PublicKey> = {
+        let contacts_guard = state.contacts.read().await;
+        if let Some(ref cb) = *contacts_guard {
+            cb.list().await.unwrap_or_default()
+                .into_iter()
+                .filter_map(|c| {
+                    hex::decode(&c.node_id).ok()
+                        .and_then(|b| b.try_into().ok())
+                        .and_then(|arr: [u8; 32]| iroh::PublicKey::from_bytes(&arr).ok())
+                })
+                .collect()
+        } else {
+            vec![]
+        }
+    };
+
+    println!("[K2] 👥 Bootstrap peers: {}", peer_keys.len());
+    let gossip_topic = node.subscribe_topic_with_peers(topic_id, peer_keys).await.map_err(|e| e.to_string())?;
     
     // Split into sender and receiver (like example 12)
     let (sender, mut receiver) = gossip_topic.split();
@@ -795,6 +820,54 @@ async fn start_listening(topic: String, app_handle: tauri::AppHandle, state: Sta
     Ok(format!("Started listening on topic: {}", topic))
 }
 
+/// Proxy Groq API chat with tool_calls support (bypasses WebKit TLS issues)
+#[tauri::command]
+async fn groq_chat_with_tools(
+    messages: serde_json::Value,
+    tools: Option<serde_json::Value>,
+    api_key: String,
+    model: Option<String>,
+) -> Result<serde_json::Value, String> {
+    let base_url = std::env::var("VITE_GROQ_BASE_URL")
+        .unwrap_or_else(|_| "https://api.groq.com/openai/v1".to_string());
+    let model = model.unwrap_or_else(|| "llama-3.3-70b-versatile".to_string());
+
+    let client = reqwest::Client::new();
+    let mut body = serde_json::json!({
+        "model": model,
+        "messages": messages,
+        "temperature": 0.7
+    });
+
+    if let Some(t) = tools {
+        body["tools"] = t;
+        body["tool_choice"] = serde_json::Value::String("auto".to_string());
+    }
+
+    let response = client
+        .post(format!("{}/chat/completions", base_url))
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| format!("Request failed: {}", e))?;
+
+    if !response.status().is_success() {
+        let status = response.status();
+        let text = response.text().await.unwrap_or_default();
+        return Err(format!("Groq API error {}: {}", status, text));
+    }
+
+    let data: serde_json::Value = response.json().await.map_err(|e| e.to_string())?;
+    let message = &data["choices"][0]["message"];
+
+    Ok(serde_json::json!({
+        "content": message["content"].as_str().unwrap_or(""),
+        "tool_calls": message.get("tool_calls").cloned().unwrap_or(serde_json::Value::Null)
+    }))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -838,7 +911,8 @@ pub fn run() {
             broadcast_offer,
             send_interest,
             listen_offers,
-            start_listening
+            start_listening,
+            groq_chat_with_tools
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

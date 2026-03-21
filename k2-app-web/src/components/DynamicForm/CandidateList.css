@@ -1,0 +1,361 @@
+/**
+ * CandidateList Styles — Table layout matching NegotiationDashboard
+ */
+
+.candidate-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 0;
+}
+
+/* Header with Search and Action */
+.candidate-list-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.search-container {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+    max-width: 400px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #858585;
+    pointer-events: none;
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 12px 10px 40px;
+    background: #1F1F24;
+    border: 1px solid #3c3c3c;
+    border-radius: 8px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.87);
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.search-input:focus {
+    border-color: #4DA6FF;
+    background: #2a2a30;
+}
+
+.search-input::placeholder {
+    color: #858585;
+}
+
+.start-negotiation-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #4DA6FF 0%, #00A8FF 100%);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.start-negotiation-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(77, 166, 255, 0.4);
+}
+
+.start-negotiation-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.selected-count {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+}
+
+/* Results Info */
+.candidate-list-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px;
+}
+
+.results-count {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.sort-info {
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    color: #858585;
+}
+
+/* Rankings Container */
+.rankings-container {
+    background: #1F1F24;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.rankings-header {
+    display: grid;
+    grid-template-columns: 70px 1fr 160px 110px 90px;
+    gap: 20px;
+    padding: 14px 24px;
+    background: #2d2d30;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    color: #858585;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rankings-list {
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+/* Ranking Row */
+.ranking-row {
+    display: grid;
+    grid-template-columns: 70px 1fr 160px 110px 90px;
+    gap: 20px;
+    padding: 16px 24px;
+    border-bottom: 1px solid #2d2d30;
+    transition: all 0.2s ease;
+    align-items: center;
+    cursor: pointer;
+}
+
+.ranking-row:last-child {
+    border-bottom: none;
+}
+
+.ranking-row:hover {
+    background: rgba(77, 166, 255, 0.05);
+}
+
+.ranking-row.selected {
+    background: rgba(77, 166, 255, 0.1);
+    border-color: rgba(77, 166, 255, 0.2);
+}
+
+/* Rank Badge */
+.rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 13px;
+    background: #2d2d30;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.rank-badge.rank-1 {
+    background: #3c3c3c;
+    font-weight: 700;
+}
+
+.rank-badge.rank-2,
+.rank-badge.rank-3 {
+    background: #3c3c3c;
+}
+
+/* Candidate Column */
+.col-candidate {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.ranking-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+    color: white;
+    flex-shrink: 0;
+}
+
+.ranking-details {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.ranking-name {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.87);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+    margin-bottom: 2px;
+}
+
+.ranking-title {
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    color: #858585;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.ranking-location {
+    font-family: 'Raleway', sans-serif;
+    font-size: 11px;
+    color: #555;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+/* Price Column */
+.col-price {
+    font-family: 'Raleway', sans-serif;
+    font-size: 13px;
+    color: #858585;
+    font-weight: 500;
+}
+
+/* Status Column */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.status-badge.status-active {
+    color: #47E069;
+}
+
+.status-badge.status-completed {
+    color: #4DA6FF;
+}
+
+.status-badge.status-offline {
+    color: #858585;
+}
+
+/* Match Score Column */
+.match-score-display {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+}
+
+.match-score-value {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 18px;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.match-score-max {
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    color: #858585;
+}
+
+/* Empty State */
+.candidate-list-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px;
+    text-align: center;
+    background: #1F1F24;
+    border-radius: 12px;
+}
+
+.candidate-list-empty p {
+    margin: 16px 0 8px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.candidate-list-empty span {
+    font-family: 'Raleway', sans-serif;
+    font-size: 14px;
+    color: #858585;
+}
+
+/* Responsive */
+@media (max-width: 1000px) {
+    .rankings-header,
+    .ranking-row {
+        grid-template-columns: 50px 1fr 110px 80px;
+    }
+
+    .col-price {
+        display: none;
+    }
+}
+
+@media (max-width: 800px) {
+    .candidate-list-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-container {
+        max-width: none;
+    }
+
+    .start-negotiation-btn {
+        justify-content: center;
+    }
+}
+
+@media (max-width: 600px) {
+    .rankings-header,
+    .ranking-row {
+        grid-template-columns: 40px 1fr 70px;
+    }
+
+    .col-status {
+        display: none;
+    }
+}
