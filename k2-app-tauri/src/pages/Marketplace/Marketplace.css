@@ -1,0 +1,247 @@
+.marketplace-content {
+    padding: 24px 35px;
+    overflow-y: auto;
+    height: calc(100vh - 44px);
+    box-sizing: border-box;
+}
+
+.discover-title {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 40px 0;
+}
+
+.category-section {
+    margin-bottom: 48px;
+}
+
+.section-label {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    margin: 0 0 24px 0;
+}
+
+/* Digital Assets & Goods Grid */
+.category-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.category-card {
+    width: 290px;
+    padding: 16px 12px 16px 24px;
+    background-color: #1F1F24;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.category-card:hover {
+    background-color: #2a2a30;
+    transform: translateY(-2px);
+}
+
+.card-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.card-icon svg {
+    opacity: 0.87;
+}
+
+.card-icon img {
+    width: 32px;
+    height: 32px;
+}
+
+.card-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.card-name {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.card-traders {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: #858585;
+}
+
+/* Freelance Job Grid */
+.job-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
+}
+
+.job-card {
+    width: 290px;
+    height: 226px;
+    padding: 20px;
+    background-color: #1F1F24;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.job-card:hover {
+    background-color: #2a2a30;
+    transform: translateY(-2px);
+}
+
+.job-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.job-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.job-icon img {
+    width: 24px;
+    height: 24px;
+}
+
+.job-name {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.job-details {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 auto 0;
+}
+
+.job-details li {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: #858585;
+    line-height: 1.8;
+    padding-left: 12px;
+    position: relative;
+}
+
+.job-details li::before {
+    content: "•";
+    color: #858585;
+    position: absolute;
+    left: 0;
+    top: 0;
+}
+
+.job-count {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: #858585;
+    margin-top: 12px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+
+    .category-card,
+    .job-card {
+        width: calc(50% - 12px);
+        min-width: 240px;
+    }
+}
+
+@media (max-width: 800px) {
+
+    .category-card,
+    .job-card {
+        width: 100%;
+    }
+
+    .marketplace-content {
+        padding: 16px 20px;
+    }
+}
+
+/* Create Request Tab Styles */
+.create-request-tab {
+    padding: 0;
+}
+
+.empty-form-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+    /* background: #222226; */
+    border-radius: 16px;
+    /* border: 1px dashed #3c3c3c; */
+    margin: 20px 0;
+}
+
+.empty-form-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.8;
+}
+
+.empty-form-state h3 {
+    color: #ffffff;
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+}
+
+.empty-form-state p {
+    color: #9d9d9d;
+    font-size: 14px;
+    margin: 0 0 12px 0;
+    max-width: 400px;
+}
+
+.empty-form-hint {
+    color: #6d6d6d;
+    font-size: 13px;
+    font-style: italic;
+}
+
+/* Finding Match Tab */
+.finding-match-tab {
+    padding: 0;
+}
+
+/* Negotiation Tab */
+.negotiation-tab {
+    padding: 0;
+}
