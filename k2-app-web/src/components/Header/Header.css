@@ -1,0 +1,170 @@
+/* ═══ Header ══════════════════════════════════════════════════════════════ */
+.header-bar {
+    height: 44px;
+    background: var(--color-header, rgba(16,16,22,0.88));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--color-border, rgba(255,255,255,0.07));
+    position: relative;
+    z-index: 100;
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.header-left {
+    flex: 1;
+}
+
+.header-title {
+    flex: 1;
+    text-align: center;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--color-text, rgba(255,255,255,0.85));
+    margin: 0;
+    opacity: 0.85;
+    transition: color 0.3s ease;
+}
+
+.header-right {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.user-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.75;
+    transition: opacity 0.2s;
+}
+
+.user-icon:hover {
+    opacity: 1;
+}
+
+.team-name {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 500;
+    font-size: 15px;
+    color: var(--color-text, white);
+    opacity: 0.75;
+    transition: color 0.3s ease;
+}
+
+.header-divider {
+    width: 1px;
+    height: 20px;
+    background-color: var(--color-border, rgba(217, 217, 217, 0.18));
+    transition: background-color 0.3s ease;
+}
+
+.header-logout-btn {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--color-muted, rgba(255,255,255,0.6));
+    background: transparent;
+    border: 1px solid var(--color-border, rgba(255,255,255,0.12));
+    border-radius: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.header-logout-btn:hover {
+    color: #ff6b6b;
+    border-color: rgba(255, 107, 107, 0.35);
+    background: rgba(255, 107, 107, 0.07);
+}
+
+/* ─── AI Chat Button ─────────────────────────────────────────────────────── */
+.ai-chat-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 6px 14px 6px 10px;
+    background: linear-gradient(135deg, rgba(124,58,237,0.15) 0%, rgba(59,130,246,0.12) 100%);
+    border: 1px solid rgba(124,58,237,0.3);
+    border-radius: 10px;
+    color: var(--color-text, #E6E9F2);
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    overflow: hidden;
+    transition: border-color 0.2s, background 0.2s, box-shadow 0.2s, transform 0.15s;
+    box-shadow: 0 0 14px rgba(124,58,237,0.2), 0 0 30px rgba(59,130,246,0.08);
+}
+
+/* Pulsing glow ring */
+.ai-chat-btn__glow {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(124,58,237,0.12), rgba(59,130,246,0.08));
+    animation: ai-btn-pulse 2.8s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes ai-btn-pulse {
+    0%, 100% { opacity: 0.4; box-shadow: 0 0 0 0 rgba(124,58,237,0.25); }
+    50%       { opacity: 1;   box-shadow: 0 0 0 5px rgba(124,58,237,0); }
+}
+
+.ai-chat-btn__icon {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    filter: drop-shadow(0 0 5px rgba(124,92,255,0.7));
+    flex-shrink: 0;
+    position: relative;
+}
+
+.ai-chat-btn__label {
+    background: linear-gradient(90deg, #c4b5fd, #93c5fd);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    position: relative;
+}
+
+.ai-chat-btn:hover {
+    border-color: rgba(124,58,237,0.6);
+    background: linear-gradient(135deg, rgba(124,58,237,0.25) 0%, rgba(59,130,246,0.18) 100%);
+    box-shadow: 0 0 20px rgba(124,58,237,0.35), 0 0 50px rgba(59,130,246,0.12);
+    transform: translateY(-1px);
+}
+
+.ai-chat-btn--active {
+    border-color: rgba(124,58,237,0.7);
+    background: linear-gradient(135deg, rgba(124,58,237,0.3) 0%, rgba(59,130,246,0.22) 100%);
+    box-shadow: 0 0 24px rgba(124,58,237,0.45), 0 0 60px rgba(59,130,246,0.15);
+}
+
+.ai-chat-btn--active .ai-chat-btn__glow {
+    animation: ai-btn-pulse-active 1.4s ease-in-out infinite;
+}
+
+@keyframes ai-btn-pulse-active {
+    0%, 100% { opacity: 0.6; }
+    50%       { opacity: 1; }
+}

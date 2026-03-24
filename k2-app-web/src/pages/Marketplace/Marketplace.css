@@ -1,0 +1,586 @@
+.marketplace-content {
+    padding: 24px 35px;
+    overflow-y: auto;
+    height: calc(100vh - 44px);
+    box-sizing: border-box;
+}
+
+.discover-title {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 800;
+    font-size: 22px;
+    color: var(--color-text, #ffffff);
+    margin: 0 0 32px 0;
+    letter-spacing: -0.4px;
+    transition: color 0.3s ease;
+}
+
+.category-section {
+    margin-bottom: 48px;
+}
+
+.section-label {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--color-muted, rgba(255,255,255,0.5));
+    margin: 0 0 16px 0;
+    transition: color 0.3s ease;
+}
+
+/* ============ CATEGORY CARDS ============ */
+.category-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.category-card {
+    width: 290px;
+    padding: var(--card-padding);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-left: 3px solid var(--card-accent-strip);
+    border-radius: var(--card-radius);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+    backdrop-filter: var(--card-glass);
+    -webkit-backdrop-filter: var(--card-glass);
+}
+
+.category-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 14px;
+    border: 1px solid transparent;
+    background: linear-gradient(135deg, var(--card-accent, #4DA6FF), transparent 60%) border-box;
+    -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: destination-out;
+    mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
+    mask-composite: exclude;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.category-card:hover {
+    background: var(--card-bg-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow-hover),
+                0 0 0 0.5px var(--card-accent, var(--color-primary, #4DA6FF));
+    border-color: var(--card-border-hover);
+    border-left-color: var(--card-accent-strip);
+}
+
+.category-card:hover::before {
+    opacity: 1;
+}
+
+.category-card:hover .card-chevron {
+    opacity: 1;
+    transform: translateX(2px);
+    color: var(--card-accent, #4DA6FF);
+}
+
+.card-icon-wrap {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+}
+
+.card-icon {
+    width: 26px;
+    height: 26px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.card-icon img {
+    width: 26px;
+    height: 26px;
+}
+
+.card-icon svg {
+    width: 26px;
+    height: 26px;
+    color: currentColor;
+}
+
+.card-info {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+}
+
+.card-name {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--color-text, #ffffff);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: color 0.3s ease;
+}
+
+.card-traders {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 500;
+    font-size: 12px;
+    color: var(--color-muted, rgba(255,255,255,0.45));
+    margin-top: 3px;
+    transition: color 0.3s ease;
+}
+
+.card-chevron {
+    color: rgba(255, 255, 255, 0.2);
+    flex-shrink: 0;
+    transition: all 0.2s ease;
+    opacity: 0.5;
+}
+
+/* ============ FREELANCE CARDS ============ */
+.job-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.job-card {
+    width: 290px;
+    padding: var(--card-padding);
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-left: 3px solid var(--card-accent-strip);
+    border-radius: var(--card-radius);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: all 0.22s ease;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+    backdrop-filter: var(--card-glass);
+    -webkit-backdrop-filter: var(--card-glass);
+}
+
+.job-card:hover {
+    background: var(--card-bg-hover);
+    transform: translateY(-2px);
+    box-shadow: var(--card-shadow-hover),
+                0 0 0 0.5px var(--card-accent, var(--color-primary, #4DA6FF));
+    border-color: var(--card-border-hover);
+    border-left-color: var(--card-accent-strip);
+}
+
+.job-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.job-icon-wrap {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.job-icon {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.job-icon img {
+    width: 22px;
+    height: 22px;
+}
+
+.job-name {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--color-text, #ffffff);
+    transition: color 0.3s ease;
+}
+
+.job-details {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.job-details li {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--color-muted, rgba(255,255,255,0.55));
+    padding-left: 14px;
+    position: relative;
+    transition: color 0.3s ease;
+}
+
+.job-details li::before {
+    content: "•";
+    color: var(--bullet-color, #858585);
+    position: absolute;
+    left: 0;
+    top: 0;
+    opacity: 0.8;
+}
+
+.job-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 16px;
+    padding-top: 12px;
+    border-top: 1px solid var(--color-border, rgba(255,255,255,0.07));
+    transition: border-color 0.3s ease;
+}
+
+.job-count {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+/* ============ CATEGORY DETAIL VIEW ============ */
+.category-detail-view {
+    animation: slideInUp 0.22s ease;
+}
+
+@keyframes slideInUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.detail-back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--color-surface, rgba(255,255,255,0.04));
+    border: 1px solid var(--color-border, rgba(255,255,255,0.09));
+    color: var(--color-muted, rgba(255,255,255,0.65));
+    font-family: 'Raleway', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 9px;
+    cursor: pointer;
+    margin-bottom: 24px;
+    transition: all 0.15s ease;
+}
+
+.detail-back-btn:hover {
+    background: var(--color-surface-hover, rgba(255,255,255,0.08));
+    color: var(--color-text, #ffffff);
+}
+
+/* Hero */
+.detail-hero {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-left: 4px solid var(--card-accent-strip);
+    border-radius: var(--card-radius);
+    padding: var(--card-padding);
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--card-shadow);
+    backdrop-filter: var(--card-glass);
+    -webkit-backdrop-filter: var(--card-glass);
+    transition: background 0.3s ease, border-color 0.3s ease;
+}
+
+.detail-hero::after {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 200px;
+    height: 200px;
+    border-radius: 50%;
+    background: radial-gradient(circle, var(--accent, #4DA6FF) 0%, transparent 70%);
+    opacity: 0.06;
+    pointer-events: none;
+}
+
+.detail-hero-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.detail-hero-icon img {
+    width: 36px;
+    height: 36px;
+}
+
+.detail-hero-info {
+    flex: 1;
+}
+
+.detail-hero-title {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 800;
+    font-size: 26px;
+    color: var(--color-text, #ffffff);
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+    transition: color 0.3s ease;
+}
+
+.detail-hero-desc {
+    font-family: 'Raleway', sans-serif;
+    font-size: 14px;
+    color: var(--color-muted, rgba(255,255,255,0.55));
+    margin: 0 0 14px 0;
+    line-height: 1.65;
+    max-width: 480px;
+    transition: color 0.3s ease;
+}
+
+.detail-hero-badge {
+    display: inline-block;
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 12px;
+    border-radius: 20px;
+    letter-spacing: 0.3px;
+}
+
+/* Sub-categories */
+.detail-section {
+    margin-bottom: 28px;
+}
+
+.detail-section-title {
+    font-family: 'Raleway', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 1.4px;
+    text-transform: uppercase;
+    color: var(--color-muted, rgba(255,255,255,0.5));
+    margin: 0 0 14px 0;
+    transition: color 0.3s ease;
+}
+
+.detail-sub-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-sub-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--color-surface, rgba(255,255,255,0.03));
+    border: 1px solid var(--color-border, rgba(255,255,255,0.06));
+    border-radius: calc(var(--card-radius) * 0.75);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.detail-sub-card:hover {
+    background: var(--color-surface-hover, rgba(255,255,255,0.06));
+    border-color: var(--color-primary, rgba(255,255,255,0.15));
+    transform: translateX(3px);
+}
+
+.detail-sub-card:hover .detail-sub-arrow {
+    color: var(--accent, rgba(255,255,255,0.4));
+    opacity: 1;
+}
+
+.detail-sub-card--active {
+    background: var(--color-surface-hover, rgba(255,255,255,0.07)) !important;
+    border-color: var(--color-primary, rgba(255,255,255,0.3)) !important;
+    transform: translateX(3px);
+}
+
+.detail-sub-card--active .detail-sub-name {
+    color: var(--color-text, #ffffff);
+}
+
+.detail-sub-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    opacity: 0.8;
+}
+
+.detail-sub-name {
+    flex: 1;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: var(--color-text, rgba(255,255,255,0.85));
+    transition: color 0.3s ease;
+}
+
+.detail-sub-arrow {
+    color: rgba(255,255,255,0.18);
+    opacity: 0.5;
+    flex-shrink: 0;
+    transition: all 0.15s ease;
+}
+
+/* CTA */
+.detail-cta {
+    display: flex;
+    gap: 12px;
+    margin-top: 4px;
+}
+
+.detail-cta-btn {
+    padding: 12px 26px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #000;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.2px;
+}
+
+.detail-cta-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-1px);
+}
+
+.detail-cta-btn-ghost {
+    padding: 12px 26px;
+    background: transparent;
+    border: 1px solid;
+    border-radius: 10px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    letter-spacing: 0.2px;
+}
+
+.detail-cta-btn-ghost:hover {
+    background: rgba(255,255,255,0.04);
+    transform: translateY(-1px);
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width: 1200px) {
+    .category-card,
+    .job-card {
+        width: calc(50% - 6px);
+        min-width: 240px;
+    }
+}
+
+@media (max-width: 800px) {
+    .category-card,
+    .job-card {
+        width: 100%;
+    }
+    .marketplace-content {
+        padding: 16px 20px;
+    }
+    .detail-hero {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+    .detail-hero-desc {
+        max-width: 100%;
+    }
+}
+
+/* ============ OTHER TABS ============ */
+.create-request-tab {
+    padding: 0;
+}
+
+.empty-form-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+    border-radius: 16px;
+    margin: 20px 0;
+}
+
+.empty-form-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+    opacity: 0.8;
+}
+
+.empty-form-state h3 {
+    color: var(--color-text, #ffffff);
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    transition: color 0.3s ease;
+}
+
+.empty-form-state p {
+    color: var(--color-muted, #9d9d9d);
+    font-size: 14px;
+    margin: 0 0 12px 0;
+    max-width: 400px;
+    transition: color 0.3s ease;
+}
+
+.empty-form-hint {
+    color: #6d6d6d;
+    font-size: 13px;
+    font-style: italic;
+}
+
+.finding-match-tab {
+    padding: 0;
+}
+
+.negotiation-tab {
+    padding: 0;
+}
