@@ -1,0 +1,162 @@
+@import url('https://fonts.googleapis.com/css2?family=Raleway:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+}
+
+body {
+    font-family: 'Inter', 'Raleway', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: var(--color-bg, #1A1A1E);
+    color: var(--color-text, #e0e0e0);
+    margin: 0;
+    padding: 0;
+    font-feature-settings: "lnum";
+    font-variant-numeric: lining-nums;
+    line-height: 1.6;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#root {
+    height: 100%;
+    width: 100%;
+}
+
+/* ─── App shell ─────────────────────────────────────────────────────────── */
+.app-layout {
+    display: flex;
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden;
+    position: relative;
+    background: var(--color-bg, #1A1A1E);
+    transition: background 0.3s ease;
+}
+
+/* Soft gradient tint for light theme */
+[data-theme="light"] .app-layout {
+    background: linear-gradient(180deg, #F8FAFC 0%, #EEF2F7 100%);
+}
+
+
+/* Orb 1 — primary glow, top-left drift */
+.app-layout::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 70% 55% at 15% 20%, var(--bg-orb-1, rgba(124,58,237,0.12)) 0%, transparent 65%),
+        radial-gradient(ellipse 55% 45% at 85% 75%, var(--bg-orb-2, rgba(59,130,246,0.08)) 0%, transparent 65%);
+    animation: k2-orb-drift-1 18s ease-in-out infinite alternate;
+    transition: background 0.4s ease;
+}
+
+/* Orb 2 — accent glow, bottom-center pulse */
+.app-layout::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+        radial-gradient(ellipse 45% 40% at 55% 85%, var(--bg-orb-3, rgba(139,92,246,0.06)) 0%, transparent 60%),
+        radial-gradient(ellipse 30% 28% at 30% 60%, var(--bg-orb-1, rgba(124,58,237,0.05)) 0%, transparent 55%);
+    animation: k2-orb-drift-2 22s ease-in-out infinite alternate;
+    transition: background 0.4s ease;
+}
+
+@keyframes k2-orb-drift-1 {
+    0%   { transform: translate(0, 0) scale(1); opacity: 0.9; }
+    33%  { transform: translate(2%, 3%) scale(1.04); opacity: 1; }
+    66%  { transform: translate(-1%, 2%) scale(0.97); opacity: 0.85; }
+    100% { transform: translate(3%, -2%) scale(1.06); opacity: 1; }
+}
+
+@keyframes k2-orb-drift-2 {
+    0%   { transform: translate(0, 0) scale(1); opacity: 0.8; }
+    33%  { transform: translate(-3%, -2%) scale(1.05); opacity: 1; }
+    66%  { transform: translate(2%, -3%) scale(0.95); opacity: 0.9; }
+    100% { transform: translate(-2%, 4%) scale(1.08); opacity: 0.85; }
+}
+
+/* ─── Main content area ─────────────────────────────────────────────────── */
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    background-color: transparent;
+    /* Subtle dot grid that fades with theme */
+    background-image: radial-gradient(
+        circle,
+        var(--bg-orb-1, rgba(124,58,237,0.07)) 1px,
+        transparent 1px
+    );
+    background-size: 36px 36px;
+}
+
+
+.page-content {
+    flex: 1;
+    overflow: hidden;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--color-bg, #1A1A1E);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--color-border, #3a3a40);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--color-surface-hover, #4a4a50);
+}
+
+/* Selection styling */
+::selection {
+    background-color: rgba(99, 102, 241, 0.3);
+    color: white;
+}
+
+/* Focus styling */
+:focus {
+    outline: none;
+}
+
+:focus-visible {
+    outline: 2px solid rgba(99, 102, 241, 0.5);
+    outline-offset: 2px;
+}
+
+/* Common button reset */
+button {
+    font-family: inherit;
+    cursor: pointer;
+}
+
+/* Common link reset */
+a {
+    color: inherit;
+    text-decoration: none;
+}

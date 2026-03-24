@@ -1,0 +1,9 @@
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY target/release/k2-auth-server ./k2-auth-server
+RUN chmod +x ./k2-auth-server
+ENV K2_AUTH_ADDR=0.0.0.0:3002
+ENV DATABASE_URL=sqlite:///app/data/k2_auth.db
+EXPOSE 3002
+CMD ["./k2-auth-server"]

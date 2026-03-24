@@ -10,48 +10,49 @@ K2 is a decentralized P2P marketplace powered by AI agents. Users can buy, sell,
 - **Contact Management**: P2P-synced contact book with direct messaging
 - **File Sharing**: Share and download files directly between peers using iroh-blobs
 - **Topic-Based Discovery**: Join marketplace topics to find relevant buyers/sellers
-- **Cross-Platform**: Desktop (Windows, macOS, Linux) and Android support
+- **Authentication**: JWT-based auth (register/login/refresh/logout) with bcrypt + SQLite
 
-## Installation
+## Architecture
 
-### Option 1: Download Installer (Windows)
+| Component | Description | Port |
+|-----------|-------------|------|
+| `k2-app-web` | React frontend (Vite + TypeScript) | 80 |
+| `k2-web-server` | Axum REST API + WebSocket + P2P | 3001 |
+| `k2-auth-server` | JWT auth microservice (SQLite) | 3002 |
+| `k2-core` | Shared Rust P2P library (Iroh) | — |
 
-Download `k2-app-tauri_0.1.0_x64-setup.exe` from the repository and run the installer.
-
-### Option 2: Run from Source
-
-**Prerequisites**
-- Rust & Cargo
-- Node.js (v18+)
-- Tauri CLI: `npm install -g @tauri-apps/cli`
-- C++ Build Tools (Windows) or Xcode (macOS)
-
-**Steps**
+## Quick Start (Docker)
 
 ```bash
-cd k2-app-tauri
+docker-compose up --build
+```
+
+Open `http://localhost` in your browser.
+
+## Run from Source
+
+**Prerequisites:** Rust & Cargo, Node.js (v18+)
+
+```bash
+# 1. Auth server
+JWT_SECRET=my-secret cargo run -p k2-auth-server
+
+# 2. Web server (new terminal)
+JWT_SECRET=my-secret cargo run -p k2-web-server
+
+# 3. Frontend (new terminal)
+cd k2-app-web
 npm install
-npm run tauri dev
+VITE_API_BASE_URL=http://localhost:3001 npm run dev
 ```
-
-For Android:
-```bash
-npm run tauri android dev
-```
-
-### Build Production
-
-```bash
-npm run tauri build
-```
-
-Output: `k2-app-tauri/src-tauri/target/release/bundle/`
 
 ## Configuration
 
-Create `.env` file in `k2-app-tauri/`:
+Create `.env` file in `k2-app-web/`:
 
 ```env
+VITE_API_BASE_URL=http://localhost:3001
+VITE_AUTH_BASE_URL=http://localhost:3002
 VITE_GROQ_API_KEY=your_groq_api_key
 VITE_GROQ_BASE_URL=https://api.groq.com/openai/v1
 VITE_GROQ_SMALL_MODEL=llama-3.3-70b-versatile
@@ -59,7 +60,7 @@ VITE_GROQ_SMALL_MODEL=llama-3.3-70b-versatile
 
 ## Usage
 
-1. Launch the application
+1. Open the app and register / login (or continue as Guest)
 2. Open the AI Chat panel (bottom-right)
 3. Describe what you want to buy, sell, or exchange
 4. The AI will classify your intent and prepare a dynamic form

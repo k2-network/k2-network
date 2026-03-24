@@ -1,0 +1,365 @@
+/**
+ * DiscoveryView Styles
+ */
+
+/* ── Empty State ──────────────────────────────────────────────────────────── */
+.discovery-view-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 300px;
+    color: #858585;
+    text-align: center;
+    padding: 40px;
+    font-family: 'Raleway', sans-serif;
+    gap: 8px;
+}
+
+/* ── Main searching view ──────────────────────────────────────────────────── */
+.discovery-view {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 32px;
+    padding: 0;
+}
+
+/* ── Status Text ──────────────────────────────────────────────────────────── */
+.discovery-status {
+    text-align: center;
+}
+
+.discovery-status .status-text {
+    font-family: 'Raleway', sans-serif;
+    font-size: 16px;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.87);
+    animation: fadeInUp 0.5s ease forwards;
+}
+
+.discovery-status.found .status-text {
+    color: #4DA6FF;
+    font-size: 18px;
+}
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Visual — Sonar / Ripple ──────────────────────────────────────────────── */
+.discovery-visual {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ripple-container {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ripple-circle {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(77, 166, 255, 0.15);
+    opacity: 0;
+}
+
+.ripple-circle.ripple-1 { width: 80px;  height: 80px;  }
+.ripple-circle.ripple-2 { width: 120px; height: 120px; }
+.ripple-circle.ripple-3 { width: 160px; height: 160px; }
+
+.ripple-container.animating .ripple-1 {
+    animation: ripplePulse 2.4s ease-in-out infinite 0s;
+}
+.ripple-container.animating .ripple-2 {
+    animation: ripplePulse 2.4s ease-in-out infinite 0.4s;
+}
+.ripple-container.animating .ripple-3 {
+    animation: ripplePulse 2.4s ease-in-out infinite 0.8s;
+}
+
+@keyframes ripplePulse {
+    0%   { opacity: 0; transform: scale(0.8); }
+    50%  { opacity: 1; transform: scale(1);   }
+    100% { opacity: 0; transform: scale(0.8); }
+}
+
+.ripple-container:not(.animating) .ripple-circle {
+    opacity: 0.4;
+    transform: scale(1);
+}
+
+.discovery-icon {
+    position: relative;
+    z-index: 10;
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #2d2d30;
+    box-shadow: 0 4px 20px rgba(77, 166, 255, 0.25);
+}
+
+.discovery-icon img {
+    width: 48px;
+    height: 48px;
+}
+
+/* ── Progress Bar ─────────────────────────────────────────────────────────── */
+.discovery-progress-container {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    max-width: 400px;
+}
+
+.discovery-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #3c3c3c;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.discovery-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #4DA6FF 0%, #47E069 100%);
+    border-radius: 4px;
+    transition: width 0.5s ease;
+}
+
+.discovery-progress-text {
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    color: #858585;
+    min-width: 36px;
+    text-align: right;
+}
+
+/* ── Broadcast Info ───────────────────────────────────────────────────────── */
+.discovery-broadcast-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 13px;
+    color: #858585;
+}
+
+.broadcast-label {
+    color: #858585;
+}
+
+.broadcast-count {
+    color: #4DA6FF;
+    font-weight: 600;
+    font-size: 16px;
+    min-width: 24px;
+    text-align: center;
+}
+
+.broadcast-unit {
+    color: #858585;
+}
+
+/* ── Cancel Button ────────────────────────────────────────────────────────── */
+.discovery-cancel-btn {
+    padding: 10px 24px;
+    background: transparent;
+    border: 1px solid #3c3c3c;
+    border-radius: 8px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 500;
+    font-size: 14px;
+    color: #858585;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.discovery-cancel-btn:hover {
+    border-color: #555;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.discovery-cancel-btn-inline {
+    padding: 4px 12px;
+    background: transparent;
+    border: 1px solid #3c3c3c;
+    border-radius: 6px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    color: #858585;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.discovery-cancel-btn-inline:hover {
+    border-color: #FF6B6B;
+    color: #FF6B6B;
+}
+
+/* ── Success Actions ──────────────────────────────────────────────────────── */
+.discovery-success-actions {
+    display: flex;
+    justify-content: center;
+}
+
+.discovery-view-matches-btn {
+    padding: 10px 28px;
+    background: linear-gradient(135deg, #4DA6FF 0%, #00A8FF 100%);
+    border: none;
+    border-radius: 8px;
+    font-family: 'Raleway', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.discovery-view-matches-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(77, 166, 255, 0.4);
+}
+
+/* ── Results — compact header + candidate list ────────────────────────────── */
+.discovery-with-results {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding: 0;
+    align-items: stretch;
+}
+
+.discovery-compact-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    height: 48px;
+    background: #1F1F24;
+    border-radius: 8px;
+    border: 1px solid #3c3c3c;
+    position: relative;
+    overflow: hidden;
+}
+
+.compact-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.compact-indicator {
+    position: relative;
+    width: 10px;
+    height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.indicator-dot {
+    width: 8px;
+    height: 8px;
+    background: #4DA6FF;
+    border-radius: 50%;
+    z-index: 2;
+}
+
+.compact-indicator.success .indicator-dot {
+    background: #47E069;
+}
+
+.indicator-ping {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: rgba(77, 166, 255, 0.4);
+    border-radius: 50%;
+    opacity: 0;
+    animation: indicatorPing 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+@keyframes indicatorPing {
+    0%   { transform: scale(0.5); opacity: 0.8; }
+    100% { transform: scale(2.5); opacity: 0;   }
+}
+
+.compact-status-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 13px;
+}
+
+.status-primary {
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.87);
+}
+
+.status-separator {
+    color: #555;
+    font-size: 10px;
+}
+
+.status-secondary {
+    color: #858585;
+}
+
+.compact-right {
+    display: flex;
+    align-items: center;
+}
+
+.compact-metric {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Raleway', sans-serif;
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+.metric-label { color: #858585; }
+.metric-value { color: #4DA6FF; font-weight: 600; }
+
+.compact-progress-line {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background: rgba(77, 166, 255, 0.15);
+    overflow: hidden;
+}
+
+.compact-progress-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #4DA6FF 0%, #00C8FF 100%);
+    transform-origin: left center;
+    animation: progressCycle 3s linear infinite;
+}
+
+@keyframes progressCycle {
+    0%   { transform: scaleX(0); }
+    100% { transform: scaleX(1); }
+}

@@ -1,6 +1,10 @@
 [workspace]
 members = [
     "k2-core",
+<<<<<<< Updated upstream
     "k2-app-tauri/src-tauri"
+=======
+    "k2-web-server"
+>>>>>>> Stashed changes
 ]
 resolver = "2"
