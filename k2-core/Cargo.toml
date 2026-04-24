@@ -21,6 +21,10 @@ rand = "0.9"
 blake3 = "1"
 hex = "0.4"
 iroh-content-discovery = { path = "../../iroh-test-space/iroh-content-discovery" }
+amulet = { path = "../../amulet" }
+directories = "5"
+aes-gcm = "0.10"
+base64 = "0.22"
 
 
 

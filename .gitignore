@@ -39,3 +39,4 @@ k2-app-tauri/src-tauri/gen/
 **/*.rs.bk
 *.pdb
 llm-wiki
+.gitnexus

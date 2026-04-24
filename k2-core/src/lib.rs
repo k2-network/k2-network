@@ -39,6 +39,9 @@ use iroh_gossip::api::GossipSender;
 use tokio::sync::Mutex as TokioMutex;
 mod docs;
 pub use docs::*;
+mod identity;
+pub use identity::*;
+
 // Default tracker ID (same as example 12)
 pub const DEFAULT_TRACKER: &str = "71853750efc1219d7976639087c5fb25cf8d4b49f6d509366f2e094a3f781623";
 
@@ -288,8 +291,9 @@ impl K2Node {
 
     /// Create a new Iroh node with optional persistent data directory
     pub async fn with_data_dir(data_dir: Option<PathBuf>) -> Result<Self> {
-        // Generate secret key for this node
-        let secret_key = SecretKey::generate(&mut rand::rng());
+        // Load existing identity or generate new one (stored in OS Secure Store + Encrypted Backup)
+        let secret_key = IdentityManager::load_or_generate()
+            .context("Failed to load or generate identity")?;
         
         // Create DHT discovery builder
         let discovery = DhtDiscovery::builder()
