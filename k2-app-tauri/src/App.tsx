@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Sidebar, Header } from "./components";
-import { MarketplacePage, NegotiationPage, ContactPage, ProfilePage } from "./pages";
+import { MarketplacePage, NegotiationPage, ContactPage, ProfilePage, SyncPage } from "./pages";
 import ChatInterface from "./components/Chat/ChatInterface";
 import { TabType, TAB_LABELS } from "./types";
 import "./App.css";
@@ -39,6 +39,8 @@ function App() {
         return <ContactPage />;
       case "profile":
         return <ProfilePage />;
+      case "sync":
+        return <SyncPage />;
       default:
         return <MarketplacePage />;
     }

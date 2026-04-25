@@ -6,6 +6,7 @@ import marketplaceIcon from "../../assets/icons/marketplace.svg";
 import negotiationIcon from "../../assets/icons/negotiation.svg";
 import contactIcon from "../../assets/icons/contact.svg";
 import profileIcon from "../../assets/icons/profile.svg";
+import syncIcon from "../../assets/icons/sync.svg";
 
 interface SidebarProps {
     activeTab: TabType;
@@ -17,6 +18,7 @@ const tabs: { id: TabType; icon: string; label: string }[] = [
     { id: "negotiation", icon: negotiationIcon, label: "Negotiation" },
     { id: "contact", icon: contactIcon, label: "Contact" },
     { id: "profile", icon: profileIcon, label: "Profile" },
+    { id: "sync", icon: syncIcon, label: "Sync Support" },
 ];
 
 export function Sidebar({ activeTab, onTabChange }: SidebarProps) {

@@ -41,11 +41,13 @@ mod identity;
 mod docs;
 mod blobs;
 mod profile;
+mod sync;
 
 pub use identity::*;
 pub use docs::*;
 pub use blobs::*;
 pub use profile::*;
+pub use sync::*;
 
 // Default tracker ID (same as example 12)
 pub const DEFAULT_TRACKER: &str = "71853750efc1219d7976639087c5fb25cf8d4b49f6d509366f2e094a3f781623";
@@ -285,6 +287,7 @@ pub struct K2Node {
     docs: Docs,
     docs_client: K2DocsClient,
     profile_manager: ProfileManager,
+    sync_manager: SyncManager,
     secret_key: SecretKey,
     #[allow(dead_code)]
     router: Arc<Router>,
@@ -370,6 +373,9 @@ impl K2Node {
         let mut profile_manager = ProfileManager::new(docs_client.clone(), blob_client.clone());
         profile_manager.init().await.context("Failed to initialize profile manager")?;
 
+        // Create sync manager
+        let sync_manager = SyncManager::new(docs_client.clone());
+
         Ok(Self {
             endpoint,
             blobs,
@@ -379,6 +385,7 @@ impl K2Node {
             docs,
             docs_client,
             profile_manager,
+            sync_manager,
             secret_key,
             router: Arc::new(router),
             data_dir,
@@ -415,6 +422,11 @@ impl K2Node {
     /// Access the profile manager
     pub fn profile(&self) -> &ProfileManager {
         &self.profile_manager
+    }
+
+    /// Access the sync manager
+    pub fn sync(&self) -> &SyncManager {
+        &self.sync_manager
     }
 
     /// Connect to a peer by their public key string (hex)

@@ -1,4 +1,4 @@
-export type TabType = "marketplace" | "negotiation" | "contact" | "profile";
+export type TabType = "marketplace" | "negotiation" | "contact" | "profile" | "sync";
 
 export interface Contact {
     node_id: string;
@@ -12,4 +12,5 @@ export const TAB_LABELS: Record<TabType, string> = {
     negotiation: "Negotiation",
     contact: "Contact",
     profile: "Profile",
+    sync: "Sync Support",
 };

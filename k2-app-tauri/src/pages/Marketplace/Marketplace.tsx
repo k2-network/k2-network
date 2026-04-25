@@ -132,6 +132,32 @@ export function MarketplacePage() {
     const [discoveryFormData, setDiscoveryFormData] = useState<DynamicFormFields | null>(null);
     const [negotiationCandidates, setNegotiationCandidates] = useState<Candidate[]>([]);
 
+    // Load initial data from localStorage
+    useEffect(() => {
+        const savedForm = localStorage.getItem('k2_marketplace_form');
+        if (savedForm) {
+            try {
+                const parsed = JSON.parse(savedForm);
+                setFormData(parsed);
+                // If there's saved data, maybe default to 'create' tab if it's not empty
+                if (Object.keys(parsed).length > 0) {
+                    setActiveTab('create');
+                }
+            } catch (e) {
+                console.error("Failed to parse saved marketplace form", e);
+            }
+        }
+    }, []);
+
+    // Save to localStorage when formData changes
+    useEffect(() => {
+        if (formData) {
+            localStorage.setItem('k2_marketplace_form', JSON.stringify(formData));
+        } else {
+            localStorage.removeItem('k2_marketplace_form');
+        }
+    }, [formData]);
+
     // Listen for form data from AI chat (via custom event or context)
     useEffect(() => {
         const handleFormData = (event: CustomEvent<{ data: Partial<DynamicFormFields>, streaming?: boolean }>) => {
@@ -155,13 +181,14 @@ export function MarketplacePage() {
             window.removeEventListener('k2:showDynamicForm' as any, handleFormData);
             window.removeEventListener('k2:startDiscovery' as any, handleStartDiscovery);
         };
-    }, [currentFormData]);  // Depend on currentFormData to get latest value
+    }, [currentFormData]);
 
     const handleFormSubmit = (data: DynamicFormFields) => {
         console.log("📤 [Marketplace] Form submitted:", data);
-        // TODO: Dispatch to P2P network
-        // For now, emit event for chat to handle
+        // Dispatch to P2P network
         window.dispatchEvent(new CustomEvent('k2:formSubmitted', { detail: data }));
+        // Clear saved form data after successful submission
+        setFormData(null);
     };
 
     const handleFormCancel = () => {
