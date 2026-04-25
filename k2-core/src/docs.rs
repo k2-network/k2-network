@@ -154,6 +154,20 @@ impl K2DocHandle {
         Ok(results)
     }
 
+    /// Liệt kê tất cả các Entry (chỉ Metadata) trong Document này.
+    pub async fn list_all(&self) -> Result<Vec<Entry>> {
+        let query = Query::all();
+        let stream = self.inner.get_many(query).await?;
+        tokio::pin!(stream);
+        
+        let mut results = Vec::new();
+        while let Some(result) = stream.next().await {
+            let entry: Entry = result.context("Failed to get entry from stream")?;
+            results.push(entry);
+        }
+        Ok(results)
+    }
+
     /// THÔNG MINH: Xóa một bản ghi (tạo tombstone). 
     pub async fn delete(&self, key: impl Into<Vec<u8>>) -> Result<usize> {
         self.inner.del(self.author, key.into()).await

@@ -182,7 +182,7 @@ export function ProfilePage() {
                                     }}
                                 />
                             ) : (
-                                <h2 className="profile-name">
+                                <h2 className="profile-name" onClick={() => setIsEditingName(true)} style={{ cursor: 'pointer' }}>
                                     {username} <IoSparkles className="name-icon" />
                                 </h2>
                             )}

@@ -392,9 +392,14 @@ impl K2Node {
     }
 
 
-    /// Get the Docs protocol instance
-    pub fn docs(&self) -> &Docs {
+    /// Get the low-level Iroh Docs protocol instance
+    pub fn iroh_docs(&self) -> &Docs {
         &self.docs
+    }
+
+    /// Get the high-level K2DocsClient
+    pub fn docs(&self) -> &K2DocsClient {
+        &self.docs_client
     }
 
     /// Create a ContactBookDocs instance
