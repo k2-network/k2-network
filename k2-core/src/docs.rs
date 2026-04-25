@@ -13,7 +13,7 @@ use iroh_docs::{
     NamespaceId, AuthorId,
     actor::OpenState,
 };
-use iroh_blobs::store::mem::MemStore;
+use iroh_blobs::store::fs::FsStore;
 use futures::{Stream, StreamExt};
 use serde::{de::DeserializeOwned, Serialize};
 
@@ -21,11 +21,11 @@ use serde::{de::DeserializeOwned, Serialize};
 #[derive(Clone)]
 pub struct K2DocsClient {
     docs: Docs,
-    store: MemStore,
+    store: FsStore,
 }
 
 impl K2DocsClient {
-    pub fn new(docs: Docs, store: MemStore) -> Self {
+    pub fn new(docs: Docs, store: FsStore) -> Self {
         Self { docs, store }
     }
 
@@ -62,17 +62,30 @@ impl K2DocsClient {
         }
         Ok(docs)
     }
+
+    /// Join một tài liệu từ DocTicket (nhận từ peer khác).
+    pub async fn import_doc(&self, ticket: iroh_docs::DocTicket) -> Result<K2DocHandle> {
+        let doc = self.docs.import(ticket).await.context("Failed to import document")?;
+        let author = self.default_author().await?;
+        Ok(K2DocHandle::new(doc, author, self.store.clone()))
+    }
+
+    /// Xóa một tài liệu khỏi node.
+    pub async fn drop_doc(&self, id: NamespaceId) -> Result<()> {
+        self.docs.drop_doc(id).await.context("Failed to drop document")
+    }
 }
 
 /// K2DocHandle: Một lớp thông minh đại diện cho một tài liệu cụ thể.
+#[derive(Clone)]
 pub struct K2DocHandle {
     inner: Doc,
     author: AuthorId,
-    store: MemStore,
+    store: FsStore,
 }
 
 impl K2DocHandle {
-    pub fn new(doc: Doc, author: AuthorId, store: MemStore) -> Self {
+    pub fn new(doc: Doc, author: AuthorId, store: FsStore) -> Self {
         Self { inner: doc, author, store }
     }
 
@@ -84,8 +97,15 @@ impl K2DocHandle {
     pub async fn put(&self, key: impl Into<Vec<u8>>, value: impl Into<Vec<u8>>) -> Result<()> {
         let k = key.into();
         let v = value.into();
+        
+        // Iroh v0.95+ does not allow empty entries
+        if v.is_empty() {
+            return Ok(());
+        }
+
         self.inner.set_bytes(self.author, k, v).await
             .map(|_| ())
+            .map_err(|e| anyhow::anyhow!("Iroh set_bytes error: {:?}. Author: {:?}, Doc: {:?}", e, self.author, self.inner.id()))
             .context("Failed to set bytes")
     }
 
@@ -95,6 +115,8 @@ impl K2DocHandle {
             let hash = entry.content_hash();
             if let Ok(content) = self.store.get_bytes(hash).await {
                 return Ok(Some(content.to_vec()));
+            } else {
+                return Err(anyhow::anyhow!("Blob not found in store for hash: {:?}", hash));
             }
         }
         Ok(None)
@@ -160,5 +182,27 @@ impl K2DocHandle {
         self.inner.start_sync(peers).await
             .map(|_| ())
             .context("Failed to start sync")
+    }
+
+    /// Dừng đồng bộ tài liệu.
+    pub async fn leave(&self) -> Result<()> {
+        self.inner.leave().await.context("Failed to leave sync")
+    }
+
+    /// Chia sẻ tài liệu qua DocTicket.
+    pub async fn share(&self, mode: iroh_docs::api::protocol::ShareMode) -> Result<iroh_docs::DocTicket> {
+        self.inner.share(mode, iroh_docs::api::protocol::AddrInfoOptions::Id)
+            .await.context("Failed to share document")
+    }
+
+    /// Truy vấn linh hoạt bằng Query.
+    pub async fn get_one(&self, query: impl Into<iroh_docs::store::Query>) -> Result<Option<Entry>> {
+        self.inner.get_one(query).await.context("Failed to get entry")
+    }
+
+    /// Truy vấn nhiều entries bằng Query.
+    pub async fn get_many(&self, query: impl Into<iroh_docs::store::Query>) -> Result<impl Stream<Item = Result<Entry>>> {
+        let stream = self.inner.get_many(query).await.context("Failed to get entries")?;
+        Ok(stream.map(|res| res.map_err(anyhow::Error::from)))
     }
 }

@@ -1,149 +1,62 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { IoCopy, IoCheckmark, IoSparkles, IoTrophy, IoFlash } from "react-icons/io5";
+import { IoCopy, IoCheckmark, IoSparkles, IoTrophy, IoFlash, IoEye } from "react-icons/io5";
+import { ProfileViewer } from "./ProfileViewer";
+import { ProfileData } from "./types";
 import "./Profile.css";
-
-// Pentagon/Radar chart component
-const StatsRadar = ({ stats }: { stats: { label: string; value: number }[] }) => {
-    const size = 180;
-    const center = size / 2;
-    const radius = 45;
-    const points = stats.length;
-
-    const getPoint = (index: number, value: number) => {
-        const angle = (Math.PI * 2 * index) / points - Math.PI / 2;
-        const r = (value / 100) * radius;
-        return {
-            x: center + r * Math.cos(angle),
-            y: center + r * Math.sin(angle)
-        };
-    };
-
-    const getLabelPoint = (index: number) => {
-        const angle = (Math.PI * 2 * index) / points - Math.PI / 2;
-        const r = radius + 20;
-        return {
-            x: center + r * Math.cos(angle),
-            y: center + r * Math.sin(angle)
-        };
-    };
-
-    const gridLevels = [25, 50, 75, 100];
-
-    return (
-        <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-            {gridLevels.map((level) => (
-                <polygon
-                    key={level}
-                    points={stats.map((_, i) => {
-                        const p = getPoint(i, level);
-                        return `${p.x},${p.y}`;
-                    }).join(' ')}
-                    fill="none"
-                    stroke="#222"
-                    strokeWidth="1"
-                />
-            ))}
-            {stats.map((_, i) => {
-                const p = getPoint(i, 100);
-                return (
-                    <line key={i} x1={center} y1={center} x2={p.x} y2={p.y} stroke="#222" strokeWidth="1" />
-                );
-            })}
-            <polygon
-                points={stats.map((s, i) => {
-                    const p = getPoint(i, s.value);
-                    return `${p.x},${p.y}`;
-                }).join(' ')}
-                fill="rgba(77, 166, 255, 0.15)"
-                stroke="#4DA6FF"
-                strokeWidth="1.5"
-            />
-            {stats.map((s, i) => {
-                const p = getPoint(i, s.value);
-                return <circle key={i} cx={p.x} cy={p.y} r="2" fill="#4DA6FF" />;
-            })}
-            {stats.map((s, i) => {
-                const p = getLabelPoint(i);
-                return (
-                    <text key={i} x={p.x} y={p.y} textAnchor="middle" dominantBaseline="middle" fill="#d3d3d3" fontSize="8">
-                        {s.label}
-                    </text>
-                );
-            })}
-        </svg>
-    );
-};
-
-// Trade card component matching reference
-// const TradeCard = ({ symbol, date, change, status }: { symbol: string; date: string; change: number; status: string }) => {
-//     // Mock mini chart bars
-//     const bars = Array.from({ length: 30 }, () => Math.random() * 40 + 10);
-
-//     return (
-//         <div className="trade-card">
-//             <div className="trade-header">
-//                 <div className="trade-symbol-info">
-//                     <div className="trade-icon">{symbol.charAt(0)}</div>
-//                     <div>
-//                         <div className="trade-symbol">{symbol}</div>
-//                         <div className="trade-date">{date}</div>
-//                     </div>
-//                 </div>
-//                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-//                     <span className="trade-badge">{status}</span>
-//                     <span className={`trade-change ${change >= 0 ? 'positive' : 'negative'}`}>
-//                         {change >= 0 ? '↑' : '↓'}{Math.abs(change)}%
-//                     </span>
-//                 </div>
-//             </div>
-
-//             <div className="trade-meta">
-//                 <span>Risk: Degen</span>
-//                 <span>Risk/Reward: 0.63</span>
-//             </div>
-
-//             <div className="trade-chart">
-//                 {bars.map((h, i) => (
-//                     <div key={i} className="chart-bar" style={{ height: `${h}%` }} />
-//                 ))}
-//             </div>
-
-//             <div className="trade-status-row">
-//                 <span className="trade-status">POSITION TAKEN</span>
-//             </div>
-
-//             <div className="trade-footer">
-//                 <div className="trade-actions">
-//                     <button className="trade-action"><IoThumbsUp /> 1</button>
-//                     <button className="trade-action"><IoChatbubble /></button>
-//                     <button className="trade-action"><IoBookmark /></button>
-//                 </div>
-//                 <div className="trade-menu">
-//                     <button className="trade-menu-btn"><IoShareSocial /></button>
-//                     <button className="trade-menu-btn"><IoEllipsisHorizontal /></button>
-//                 </div>
-//             </div>
-//         </div>
-//     );
-// };
 
 export function ProfilePage() {
     const [nodeId, setNodeId] = useState<string>("");
     const [copied, setCopied] = useState(false);
-    const [username, setUsername] = useState(() => localStorage.getItem('k2_username') || 'Anonymous');
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [isPreviewMode, setIsPreviewMode] = useState(false);
+    
+    // Profile Data States
+    const [username, setUsername] = useState('Anonymous');
+    const [intro, setIntro] = useState('');
+    const [description, setDescription] = useState('');
+    const [avatar, setAvatar] = useState<string | null>(null);
+    const [logoDark, setLogoDark] = useState<string | null>(null);
+    const [logoLight, setLogoLight] = useState<string | null>(null);
+
     const [isEditingName, setIsEditingName] = useState(false);
 
+    // Refs for hidden inputs
+    const avatarInputRef = useRef<HTMLInputElement>(null);
+    const logoDarkInputRef = useRef<HTMLInputElement>(null);
+    const logoLightInputRef = useRef<HTMLInputElement>(null);
+
     useEffect(() => {
-        const fetchNodeId = async () => {
+        const fetchProfile = async () => {
             try {
+                // Get node ID
                 const id = await invoke<string>('get_my_node_id');
                 setNodeId(id);
+
+                // Get profile data
+                const p = await invoke<any>('get_profile');
+                setUsername(p.name || 'Anonymous');
+                setIntro(p.intro || '');
+                setDescription(p.description || '');
+                
+                // Fetch images if hashes exist
+                if (p.avatar_hash) {
+                    const b64 = await invoke<string>('get_profile_image', { hash: p.avatar_hash });
+                    setAvatar(b64);
+                }
+                if (p.logo_hash) {
+                    const b64 = await invoke<string>('get_profile_image', { hash: p.logo_hash });
+                    setLogoDark(b64);
+                }
+                if (p.logo_light_hash) {
+                    const b64 = await invoke<string>('get_profile_image', { hash: p.logo_light_hash });
+                    setLogoLight(b64);
+                }
             } catch (err) {
-                console.error('Failed to get node id:', err);
+                console.error('Failed to fetch profile:', err);
             }
         };
-        fetchNodeId();
+        fetchProfile();
     }, []);
 
     const copyNodeId = () => {
@@ -153,26 +66,75 @@ export function ProfilePage() {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const handleNameSave = (newName: string) => {
-        const name = newName.trim() || 'Anonymous';
-        setUsername(name);
-        localStorage.setItem('k2_username', name);
-        setIsEditingName(false);
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'avatar' | 'logoDark' | 'logoLight') => {
+        const file = e.target.files?.[0];
+        if (file) {
+            try {
+                // Read as ArrayBuffer for Rust
+                const arrayBuffer = await file.arrayBuffer();
+                const bytes = Array.from(new Uint8Array(arrayBuffer));
+                
+                // Map frontend type to backend field name
+                const field = type === 'avatar' ? 'avatar' : (type === 'logoDark' ? 'logo_dark' : 'logo_light');
+                
+                // Upload to Iroh Blobs
+                await invoke('update_profile_image', { field, bytes });
+
+                // Read as DataURL for immediate UI preview
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const base64String = reader.result as string;
+                    if (type === 'avatar') setAvatar(base64String);
+                    else if (type === 'logoDark') setLogoDark(base64String);
+                    else if (type === 'logoLight') setLogoLight(base64String);
+                };
+                reader.readAsDataURL(file);
+            } catch (err) {
+                console.error('Failed to upload image:', err);
+            }
+        }
     };
 
-    const radarStats = [
-        { label: "TRADES", value: 75 },
-        { label: "REWARD", value: 68 },
-        { label: "DRAWDOWN", value: 45 },
-        { label: "RATE", value: 82 },
-        { label: "RETURN", value: 55 }
-    ];
+    const handleRemoveImage = (type: 'avatar' | 'logoDark' | 'logoLight') => {
+        // Logic to remove from docs (optional, just clearing local state for now)
+        if (type === 'avatar') setAvatar(null);
+        else if (type === 'logoDark') setLogoDark(null);
+        else if (type === 'logoLight') setLogoLight(null);
+    };
 
-    // const trades = [
-    //     { symbol: "MSFT", date: "7/17/25 22c @1.97", change: 10, status: "OPEN" },
-    //     { symbol: "AAPL", date: "7/13/25 19c @1.91", change: -10, status: "OPEN" },
-    //     { symbol: "NVDA", date: "6/30/25 23c @1.84", change: 10, status: "OPEN" }
-    // ];
+    const profileData: ProfileData = {
+        username,
+        intro,
+        connections: 128, // Mock
+        nodeId,
+        avatar,
+        logoDark,
+        logoLight,
+        description
+    };
+
+    if (!isEditMode) {
+        return (
+            <div className="profile-viewer-wrapper">
+                {!isPreviewMode && (
+                    <div className="viewer-controls">
+                        <button className="edit-profile-btn" onClick={() => setIsEditMode(true)}>
+                            Edit Profile
+                        </button>
+                    </div>
+                )}
+                {isPreviewMode && (
+                    <div className="preview-toolbar">
+                        <span className="preview-mode-hint">Preview Mode</span>
+                        <button className="exit-preview-btn" onClick={() => setIsPreviewMode(false)}>
+                            Exit Preview
+                        </button>
+                    </div>
+                )}
+                <ProfileViewer data={profileData} />
+            </div>
+        );
+    }
 
     const shortNodeId = nodeId ? `${nodeId.slice(0, 12)}...${nodeId.slice(-8)}` : "Loading...";
 
@@ -182,27 +144,91 @@ export function ProfilePage() {
             <div className="profile-left">
                 {/* Header */}
                 <div className="profile-header">
-                    <div className="profile-avatar">
-                        <span>{username.charAt(0).toUpperCase()}</span>
+                    <div className="profile-avatar" onClick={() => avatarInputRef.current?.click()} title="Change avatar">
+                        {avatar ? (
+                            <img src={avatar} alt="Avatar" className="avatar-img" />
+                        ) : (
+                            <span>{username.charAt(0).toUpperCase()}</span>
+                        )}
+                        <input 
+                            type="file" 
+                            ref={avatarInputRef} 
+                            style={{ display: 'none' }} 
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, 'avatar')}
+                        />
                     </div>
                     <div className="profile-name-section">
-                        {isEditingName ? (
-                            <input
-                                className="profile-name-input"
-                                defaultValue={username}
-                                autoFocus
-                                onBlur={(e) => handleNameSave(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleNameSave(e.currentTarget.value);
-                                    if (e.key === 'Escape') setIsEditingName(false);
-                                }}
+                        <div className="profile-name-container">
+                            {isEditingName ? (
+                                <input
+                                    className="profile-name-input"
+                                    defaultValue={username}
+                                    autoFocus
+                                    onBlur={(e) => {
+                                        const val = e.target.value.trim() || 'Anonymous';
+                                        setUsername(val);
+                                        localStorage.setItem('k2_username', val);
+                                        setIsEditingName(false);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') {
+                                            const val = e.currentTarget.value.trim() || 'Anonymous';
+                                            setUsername(val);
+                                            localStorage.setItem('k2_username', val);
+                                            setIsEditingName(false);
+                                        }
+                                        if (e.key === 'Escape') setIsEditingName(false);
+                                    }}
+                                />
+                            ) : (
+                                <h2 className="profile-name">
+                                    {username} <IoSparkles className="name-icon" />
+                                </h2>
+                            )}
+                            <div className="editor-controls">
+                                <button className="save-profile-btn" onClick={async () => {
+                                    try {
+                                        await invoke('update_profile_text', { 
+                                            name: username, 
+                                            intro, 
+                                            description 
+                                        });
+                                        setIsEditMode(false);
+                                    } catch (err) {
+                                        console.error('Failed to save profile:', err);
+                                    }
+                                }}>
+                                    Save & View
+                                </button>
+                                <button className="view-as-btn" title="View as others" onClick={async () => {
+                                    try {
+                                        await invoke('update_profile_text', { 
+                                            name: username, 
+                                            intro, 
+                                            description 
+                                        });
+                                        setIsPreviewMode(true);
+                                        setIsEditMode(false);
+                                    } catch (err) {
+                                        console.error('Failed to save profile:', err);
+                                    }
+                                }}>
+                                    <IoEye />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="profile-stats-row">
+                            <span className="profile-connections">128 Connections</span>
+                        </div>
+                        <div className="profile-intro-section">
+                            <input 
+                                className="profile-intro-input" 
+                                placeholder="Write a short intro about yourself..."
+                                value={intro}
+                                onChange={(e) => setIntro(e.target.value)}
                             />
-                        ) : (
-                            <h2 className="profile-name" onClick={() => setIsEditingName(true)} title="Click to edit">
-                                {username} <IoSparkles className="name-icon" />
-                            </h2>
-                        )}
-                        <div className="profile-subscribers">59 subscribers</div>
+                        </div>
                     </div>
                 </div>
 
@@ -212,7 +238,6 @@ export function ProfilePage() {
                     <span className="badge badge-secondary"><IoFlash /> CONTRIBUTOR </span>
                 </div>
 
-                {/* Node ID */}
                 <div className="node-id-section">
                     <div className="node-id-label">Your Node ID</div>
                     <div className="node-id-box">
@@ -221,63 +246,119 @@ export function ProfilePage() {
                             {copied ? <IoCheckmark /> : <IoCopy />}
                         </button>
                     </div>
-                    <div className="node-id-hint">Share this ID with others to connect</div>
                 </div>
-
-                {/* Tabs */}
-                <div className="profile-tabs">
-                    <button className="profile-tab active">My Trades</button>
-                    <button className="profile-tab">Bookmarked</button>
-                </div>
-
-                {/* Filter */}
-                <div className="trades-filter">
-                    <span className="filter-item active">Recents</span>
-                    <span className="filter-item">Popular</span>
-                    <span className="filter-item">Profitable</span>
-                </div>
-
-                {/* Trades */}
-                {/* {trades.map((trade, i) => (
-                    <TradeCard key={i} symbol={trade.symbol} date={trade.date} change={trade.change} status={trade.status} />
-                ))} */}
             </div>
 
-            {/* Right Panel - Stats */}
+            {/* Right Panel - Branding */}
             <div className="profile-right">
-                <div className="stats-title">TOTAL TRADES</div>
+                <div className="branding-title">BRANDING & LOGO</div>
 
-                <div className="radar-section">
-                    <StatsRadar stats={radarStats} />
+                <div className="logo-upload-grid">
+                    <div className="logo-upload-card">
+                        <div className="logo-preview empty">
+                            {logoDark ? (
+                                <img src={logoDark} alt="Logo Dark" className="logo-img" />
+                            ) : (
+                                <IoFlash className="upload-icon" />
+                            )}
+                        </div>
+                        <div className="logo-info">
+                            <span className="logo-label">DARK MODE</span>
+                            <div className="logo-actions">
+                                <button className="upload-btn" onClick={() => logoDarkInputRef.current?.click()}>
+                                    {logoDark ? 'Change' : 'Upload'}
+                                </button>
+                                {logoDark && (
+                                    <button className="remove-btn" onClick={() => handleRemoveImage('logoDark')}>
+                                        Remove
+                                    </button>
+                                )}
+                            </div>
+                            <input 
+                                type="file" 
+                                ref={logoDarkInputRef} 
+                                style={{ display: 'none' }} 
+                                accept="image/*"
+                                onChange={(e) => handleImageUpload(e, 'logoDark')}
+                            />
+                        </div>
+                    </div>
+
+                    <div className="logo-upload-card">
+                        <div className="logo-preview empty light">
+                            {logoLight ? (
+                                <img src={logoLight} alt="Logo Light" className="logo-img" />
+                            ) : (
+                                <IoFlash className="upload-icon" />
+                            )}
+                        </div>
+                        <div className="logo-info">
+                            <span className="logo-label">LIGHT MODE</span>
+                            <div className="logo-actions">
+                                <button className="upload-btn" onClick={() => logoLightInputRef.current?.click()}>
+                                    {logoLight ? 'Change' : 'Upload'}
+                                </button>
+                                {logoLight && (
+                                    <button className="remove-btn" onClick={() => handleRemoveImage('logoLight')}>
+                                        Remove
+                                    </button>
+                                )}
+                            </div>
+                            <input 
+                                type="file" 
+                                ref={logoLightInputRef} 
+                                style={{ display: 'none' }} 
+                                accept="image/*"
+                                onChange={(e) => handleImageUpload(e, 'logoLight')}
+                            />
+                        </div>
+                    </div>
                 </div>
 
-                <div className="stats-grid">
-                    <div className="stat-card">
-                        <div className="stat-label">AVG. WIN</div>
-                        <div className="stat-value highlight">80.21<span className="stat-suffix">%</span></div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-label">AVG. LOSS</div>
-                        <div className="stat-value">15.94<span className="stat-suffix">%</span></div>
-                    </div>
+                <div className="description-section">
+                    <div className="description-label">DESCRIPTION</div>
+                    <textarea 
+                        className="profile-description-area" 
+                        placeholder="Describe your node or service in detail..."
+                        value={description}
+                        onChange={(e) => setDescription(e.target.value)}
+                    />
                 </div>
 
-                <div className="stats-single">
-                    <div className="stat-card">
-                        <div className="stat-label">WIN RATE</div>
-                        <div className="stat-value highlight">68.75<span className="stat-suffix">%</span></div>
+                {/* Activity Timeline */}
+                <div className="activity-section">
+                    <div className="section-header">
+                        <span className="section-title">RECENT ACTIVITY</span>
                     </div>
-                    <div className="progress-bar"><div className="progress-fill" style={{ width: '68%' }} /></div>
-                </div>
-
-                <div className="stats-grid">
-                    <div className="stat-card">
-                        <div className="stat-label">TOTAL</div>
-                        <div className="stat-value">80</div>
-                    </div>
-                    <div className="stat-card">
-                        <div className="stat-label">SUM GAIN</div>
-                        <div className="stat-value highlight">2,451<span className="stat-suffix">%</span></div>
+                    <div className="activity-list">
+                        <div className="activity-item">
+                            <div className="activity-dot" />
+                            <div className="activity-content">
+                                <span className="activity-text">Synced document with <strong>BobRelay</strong></span>
+                                <span className="activity-time">2 minutes ago</span>
+                            </div>
+                        </div>
+                        <div className="activity-item">
+                            <div className="activity-dot" />
+                            <div className="activity-content">
+                                <span className="activity-text">Connected to <strong>AliceNode</strong></span>
+                                <span className="activity-time">15 minutes ago</span>
+                            </div>
+                        </div>
+                        <div className="activity-item">
+                            <div className="activity-dot" />
+                            <div className="activity-content">
+                                <span className="activity-text">Shared 128MB blob data</span>
+                                <span className="activity-time">1 hour ago</span>
+                            </div>
+                        </div>
+                        <div className="activity-item">
+                            <div className="activity-dot" />
+                            <div className="activity-content">
+                                <span className="activity-text">Node started successfully</span>
+                                <span className="activity-time">14 days ago</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

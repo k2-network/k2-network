@@ -14,7 +14,7 @@ use iroh::{
     protocol::Router,
     Endpoint, EndpointId, SecretKey,
 };
-use iroh_blobs::{store::mem::MemStore, BlobsProtocol, ticket::BlobTicket, HashAndFormat};
+use iroh_blobs::{store::fs::FsStore, BlobsProtocol, HashAndFormat};
 use iroh_gossip::{
     net::{Gossip, GOSSIP_ALPN},
     proto::TopicId,
@@ -32,15 +32,20 @@ use iroh_content_discovery::{
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use std::str::FromStr;
 use std::sync::Arc;
 use std::time::Duration;
 use iroh_gossip::api::GossipSender;
 use tokio::sync::Mutex as TokioMutex;
-mod docs;
-pub use docs::*;
+
 mod identity;
+mod docs;
+mod blobs;
+mod profile;
+
 pub use identity::*;
+pub use docs::*;
+pub use blobs::*;
+pub use profile::*;
 
 // Default tracker ID (same as example 12)
 pub const DEFAULT_TRACKER: &str = "71853750efc1219d7976639087c5fb25cf8d4b49f6d509366f2e094a3f781623";
@@ -267,30 +272,42 @@ impl ContactBookDocs {
 
 /// K2Node wraps iroh Endpoint + iroh-blobs + iroh-gossip + iroh-docs
 /// Built on iroh 0.95 with Pkarr DHT discovery
+/// All data is persisted to AppData (no in-memory storage)
 #[derive(Clone)]
 pub struct K2Node {
     endpoint: Endpoint,
+    #[allow(dead_code)]
     blobs: BlobsProtocol,
-    store: MemStore,
+    #[allow(dead_code)]
+    store: FsStore,
+    blob_client: K2Blob,
     gossip: Gossip,
     docs: Docs,
     docs_client: K2DocsClient,
+    profile_manager: ProfileManager,
     secret_key: SecretKey,
     #[allow(dead_code)]
     router: Arc<Router>,
-    data_dir: Option<PathBuf>,
+    #[allow(dead_code)]
+    data_dir: PathBuf,
     /// Cache of active topic senders for broadcasting on existing subscriptions
     active_topics: Arc<TokioMutex<HashMap<TopicId, GossipSender>>>,
 }
 
 impl K2Node {
-    /// Create a new Iroh node with Pkarr DHT discovery and gossip support
+    /// Create a new Iroh node with persistent storage at AppData
+    /// All data (blobs, docs) is stored on disk, nothing in RAM only
     pub async fn new() -> Result<Self> {
-        Self::with_data_dir(None).await
+        let data_dir = IdentityManager::get_roaming_dir();
+        Self::with_data_dir(data_dir).await
     }
 
-    /// Create a new Iroh node with optional persistent data directory
-    pub async fn with_data_dir(data_dir: Option<PathBuf>) -> Result<Self> {
+    /// Create a new Iroh node with persistent data directory
+    pub async fn with_data_dir(data_dir: PathBuf) -> Result<Self> {
+        // Ensure data directory exists
+        std::fs::create_dir_all(&data_dir)
+            .context("Failed to create data directory")?;
+
         // Load existing identity or generate new one (stored in OS Secure Store + Encrypted Backup)
         let secret_key = IdentityManager::load_or_generate()
             .context("Failed to load or generate identity")?;
@@ -321,24 +338,20 @@ impl K2Node {
         // Create gossip
         let gossip = Gossip::builder().spawn(endpoint.clone());
         
-        // Create in-memory blob store
-        let store = MemStore::new();
+        // Create persistent blob store (FsStore) at data_dir/blobs
+        let blobs_path = data_dir.join("blobs");
+        std::fs::create_dir_all(&blobs_path)?;
+        let store = FsStore::load(&blobs_path).await
+            .context("Failed to load persistent blob store")?;
         let blobs = BlobsProtocol::new(&store, None);
         
-        // Create docs (in-memory or persistent based on data_dir)
-        let docs = if let Some(ref dir) = data_dir {
-            let docs_path = dir.join("docs");
-            std::fs::create_dir_all(&docs_path)?;
-            Docs::persistent(docs_path)
-                .spawn(endpoint.clone(), (*store).clone(), gossip.clone())
-                .await
-                .context("Failed to create persistent docs")?
-        } else {
-            Docs::memory()
-                .spawn(endpoint.clone(), (*store).clone(), gossip.clone())
-                .await
-                .context("Failed to create memory docs")?
-        };
+        // Create persistent docs (redb) at data_dir/docs
+        let docs_path = data_dir.join("docs");
+        std::fs::create_dir_all(&docs_path)?;
+        let docs = Docs::persistent(docs_path)
+            .spawn(endpoint.clone(), (*store).clone(), gossip.clone())
+            .await
+            .context("Failed to create persistent docs")?;
         
         // Build router with all protocols
         let router = Router::builder(endpoint.clone())
@@ -347,16 +360,25 @@ impl K2Node {
             .accept(DOCS_ALPN, docs.clone())
             .spawn();
         
-        // Create docs client
+        // Create docs client (FsStore derefs to api::Store)
         let docs_client = K2DocsClient::new(docs.clone(), store.clone());
+        
+        // Create blobs client
+        let blob_client = K2Blob::new((*store).clone(), endpoint.clone());
+
+        // Create profile manager
+        let mut profile_manager = ProfileManager::new(docs_client.clone(), blob_client.clone());
+        profile_manager.init().await.context("Failed to initialize profile manager")?;
 
         Ok(Self {
             endpoint,
             blobs,
             store,
+            blob_client,
             gossip,
             docs,
             docs_client,
+            profile_manager,
             secret_key,
             router: Arc::new(router),
             data_dir,
@@ -380,6 +402,16 @@ impl K2Node {
         ContactBookDocs::new(self.docs_client.clone())
     }
 
+    /// Access the common blob client
+    pub fn blobs(&self) -> &K2Blob {
+        &self.blob_client
+    }
+
+    /// Access the profile manager
+    pub fn profile(&self) -> &ProfileManager {
+        &self.profile_manager
+    }
+
     /// Connect to a peer by their public key string (hex)
     pub async fn connect_to_contact(&self, node_id_str: &str) -> Result<()> {
         let bytes = hex::decode(node_id_str).context("Invalid hex format")?;
@@ -399,29 +431,21 @@ impl K2Node {
 
     /// Share a file and return ticket string
     pub async fn share_file(&self, path: &Path) -> Result<String> {
-        let contents = tokio::fs::read(path).await.context("Failed to read file")?;
+        let hash = self.blob_client.add_file(path.to_path_buf()).await?;
+        let ticket = self.blob_client.create_ticket(hash).await?;
         
         let filename = path.file_name()
             .and_then(|n| n.to_str())
             .unwrap_or("file.bin")
             .to_string();
         
-        // Add to store
-        let tag = self.store.add_slice(&contents).await.context("Failed to add to store")?;
-        
-        // Create ticket with endpoint addr (iroh 0.95 API)
-        let addr = self.endpoint.addr();
-        let ticket = BlobTicket::new(addr, tag.hash, tag.format);
-        
         Ok(format!("{}|{}", filename, ticket))
     }
 
     /// Share bytes and return ticket string
     pub async fn share_bytes(&self, data: &[u8], filename: &str) -> Result<String> {
-        let tag = self.store.add_slice(data).await.context("Failed to add to store")?;
-        
-        let addr = self.endpoint.addr();
-        let ticket = BlobTicket::new(addr, tag.hash, tag.format);
+        let hash = self.blob_client.add_bytes(data.to_vec()).await?;
+        let ticket = self.blob_client.create_ticket(hash).await?;
         
         Ok(format!("{}|{}", filename, ticket))
     }
@@ -431,18 +455,9 @@ impl K2Node {
         let (filename, blob_ticket_str) = ticket_str.split_once('|')
             .context("Invalid ticket format")?;
         
-        let ticket = BlobTicket::from_str(blob_ticket_str).context("Invalid ticket")?;
+        let hash = self.blob_client.download(blob_ticket_str).await?;
         let save_path = save_dir.join(filename);
-        
-        // Download using blobs API (iroh-blobs 0.97)
-        let downloader = self.blobs.downloader(&self.endpoint);
-        downloader.download(ticket.hash(), vec![ticket.addr().id])
-            .await
-            .context("Failed to download")?;
-        
-        // Read from store
-        let data = self.store.get_bytes(ticket.hash()).await.context("Failed to read")?;
-        std::fs::write(&save_path, &data)?;
+        self.blob_client.export(hash, save_path).await?;
         
         Ok(filename.to_string())
     }

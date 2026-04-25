@@ -3,13 +3,14 @@ use std::sync::Mutex;
 use std::collections::HashMap;
 use tauri::State;
 
-use k2_core::{K2Node, Contact, K2Marketplace, ContactBookDocs};
+use k2_core::{K2Node, Contact, K2Marketplace, ContactBookDocs, Profile};
 use qrcode::QrCode;
 use qrcode::render::svg;
 #[cfg(not(target_os = "android"))]
 use directories::UserDirs;
 use tokio::sync::{RwLock, mpsc};
 use std::sync::Arc;
+use base64::{Engine as _, engine::general_purpose};
 
 /// App State - holds the K2Node instance and ContactBookDocs (iroh-docs)
 pub struct AppState {
@@ -17,6 +18,15 @@ pub struct AppState {
     pub contacts: Arc<RwLock<Option<ContactBookDocs>>>,
     /// Topic senders - for broadcasting on topics we've joined (like example 12)
     pub topic_senders: Arc<RwLock<HashMap<String, mpsc::UnboundedSender<Vec<u8>>>>>,
+}
+
+fn format_error(e: anyhow::Error) -> String {
+    let mut msg = e.to_string();
+    for cause in e.chain().skip(1) {
+        msg.push_str(&format!(": {}", cause));
+    }
+    println!("[K2-Error] ❌ {}", msg);
+    msg
 }
 
 /// Initialize the K2 P2P Node
@@ -84,6 +94,57 @@ async fn get_my_node_id(state: State<'_, AppState>) -> Result<String, String> {
         guard.clone().ok_or("Node not initialized")?
     };
     Ok(node.my_id())
+}
+
+// ============ PROFILE COMMANDS ============
+
+#[tauri::command]
+async fn get_profile(state: State<'_, AppState>) -> Result<Profile, String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.profile().get().await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn get_profile_image(hash: String, state: State<'_, AppState>) -> Result<String, String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    let bytes = node.profile().get_image_bytes(&hash).await.map_err(format_error)?;
+    
+    // Convert to base64 for easy img src usage
+    let b64 = general_purpose::STANDARD.encode(bytes);
+    // Guess mime type or just use generic image
+    Ok(format!("data:image/png;base64,{}", b64))
+}
+
+#[tauri::command]
+async fn update_profile_text(name: Option<String>, intro: Option<String>, description: Option<String>, state: State<'_, AppState>) -> Result<(), String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.profile().update_info(name, intro, description).await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn update_profile_image(field: String, bytes: Vec<u8>, state: State<'_, AppState>) -> Result<String, String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    
+    let hash = match field.as_str() {
+        "avatar" => node.profile().update_avatar(bytes).await,
+        "logo_dark" => node.profile().update_logo(bytes).await,
+        "logo_light" => node.profile().update_logo_light(bytes).await,
+        _ => return Err("Invalid field".to_string()),
+    }.map_err(format_error)?;
+    
+    Ok(hash)
 }
 
 // ============ CONTACT BOOK COMMANDS (iroh-docs) ============
@@ -811,6 +872,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             init_node,
             get_my_node_id,
+            get_profile,
+            get_profile_image,
+            update_profile_text,
+            update_profile_image,
             // Contact book commands
             add_contact,
             remove_contact,
