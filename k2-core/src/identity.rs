@@ -23,8 +23,13 @@ impl IdentityManager {
     const BACKUP_ENC_KEY: &'static [u8; 32] = b"k2-network-identity-storage-key!";
     const STATIC_NONCE: &'static [u8; 12] = b"k2-id-nonce!";
 
-    /// Get the roaming directory for K2
+    /// Get the roaming directory for K2.
+    /// Prioritizes K2_DATA_DIR environment variable for isolated/guest mode.
     pub fn get_roaming_dir() -> PathBuf {
+        if let Ok(k2_dir) = std::env::var("K2_DATA_DIR") {
+            return PathBuf::from(k2_dir);
+        }
+
         #[cfg(target_os = "windows")]
         {
             if let Ok(appdata) = std::env::var("APPDATA") {
@@ -37,28 +42,37 @@ impl IdentityManager {
     }
 
     /// Load the secret key from storage, or generate a new one if not found.
+    /// If K2_DATA_DIR is set, it skips OS Secure Store to avoid identity pollution.
     pub fn load_or_generate() -> Result<SecretKey> {
-        // 1. Try to load from Amulet (OS Secure Store)
-        if let Ok(Some(key)) = Self::load_from_amulet() {
-            println!("[Identity] 🔐 Loaded identity from OS Secure Store");
-            return Ok(key);
+        let dir = Self::get_roaming_dir();
+        let is_isolated = std::env::var("K2_DATA_DIR").is_ok();
+
+        if !is_isolated {
+            // 1. Try to load from Amulet (OS Secure Store)
+            if let Ok(Some(key)) = Self::load_from_amulet() {
+                println!("[Identity] 🔐 Loaded primary identity from OS Secure Store");
+                return Ok(key);
+            }
+        } else {
+            println!("[Identity] 🛡️ Isolated mode: Skipping OS Secure Store");
         }
 
-        // 2. Try to load from Backup File (Encrypted)
-        if let Ok(key) = Self::load_from_backup_file() {
-            println!("[Identity] 💾 Recovered identity from encrypted backup file");
-            // Sync back to Amulet for future use
-            let _ = Self::save_to_amulet(&key);
+        // 2. Try to load from Local Backup File (Encrypted)
+        if let Ok(key) = Self::load_from_backup_file(&dir) {
+            println!("[Identity] 💾 Loaded identity from local directory: {:?}", dir);
             return Ok(key);
         }
 
         // 3. Generate new if both failed
-        println!("[Identity] ✨ Generating new identity (first time initialization)");
+        println!("[Identity] ✨ Generating new identity for this environment");
         let new_key = SecretKey::generate(&mut rand::rng());
         
-        // Save to both locations
-        Self::save_to_amulet(&new_key).context("Failed to save identity to OS store")?;
-        Self::save_to_backup_file(&new_key).context("Failed to save identity to backup file")?;
+        // Save to locations
+        if !is_isolated {
+            let _ = Self::save_to_amulet(&new_key);
+        }
+        
+        Self::save_to_backup_file(&new_key, &dir).context("Failed to save identity to local directory")?;
         
         Ok(new_key)
     }
@@ -102,9 +116,8 @@ impl IdentityManager {
         Ok(())
     }
 
-    /// Save to encrypted backup file
-    fn save_to_backup_file(key: &SecretKey) -> Result<()> {
-        let dir = Self::get_roaming_dir();
+    /// Save to encrypted backup file at specific directory
+    fn save_to_backup_file(key: &SecretKey, dir: &PathBuf) -> Result<()> {
         if !dir.exists() {
             fs::create_dir_all(&dir)?;
         }
@@ -124,9 +137,9 @@ impl IdentityManager {
         Ok(())
     }
 
-    /// Load from encrypted backup file
-    fn load_from_backup_file() -> Result<SecretKey> {
-        let path = Self::get_roaming_dir().join("identity.enc");
+    /// Load from encrypted backup file from specific directory
+    fn load_from_backup_file(dir: &PathBuf) -> Result<SecretKey> {
+        let path = dir.join("identity.enc");
         if !path.exists() {
             return Err(anyhow::anyhow!("Backup file not found"));
         }
