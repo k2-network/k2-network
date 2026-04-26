@@ -47,7 +47,7 @@ async fn init_node(state: State<'_, AppState>, _app: tauri::AppHandle) -> Result
         }
     }
     
-    println!("[K2] 🚀 Initializing new node (in-memory)...");
+    println!("[K2] 🚀 Initializing K2Node with persistent storage...");
     
     let node = K2Node::new().await.map_err(|e| {
         println!("[K2] ❌ Failed to create K2Node: {:?}", e);
@@ -851,6 +851,80 @@ async fn start_listening(topic: String, app_handle: tauri::AppHandle, state: Sta
     Ok(format!("Started listening on topic: {}", topic))
 }
 
+// ============ SYNC COMMANDS (iroh-docs) ============
+
+#[tauri::command]
+async fn get_sync_folders(state: State<'_, AppState>) -> Result<Vec<k2_core::SyncFolderConfig>, String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.sync().list_folders().await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn add_sync_folder(config: k2_core::SyncFolderConfig, state: State<'_, AppState>) -> Result<(), String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.sync().add_folder_config(config).await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn remove_sync_folder(id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.sync().remove_folder_config(&id).await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn get_sync_devices(state: State<'_, AppState>) -> Result<Vec<k2_core::SyncDeviceConfig>, String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.sync().list_devices().await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn add_sync_device(config: k2_core::SyncDeviceConfig, state: State<'_, AppState>) -> Result<(), String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.sync().add_device_config(config).await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn remove_sync_device(id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.sync().remove_device_config(&id).await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn get_sync_settings(state: State<'_, AppState>) -> Result<k2_core::SyncSettings, String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.sync().get_settings().await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn update_sync_settings(settings: k2_core::SyncSettings, state: State<'_, AppState>) -> Result<(), String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.sync().update_settings(settings).await.map_err(format_error)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -898,7 +972,16 @@ pub fn run() {
             broadcast_offer,
             send_interest,
             listen_offers,
-            start_listening
+            start_listening,
+            // Sync commands
+            get_sync_folders,
+            add_sync_folder,
+            remove_sync_folder,
+            get_sync_devices,
+            add_sync_device,
+            remove_sync_device,
+            get_sync_settings,
+            update_sync_settings
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

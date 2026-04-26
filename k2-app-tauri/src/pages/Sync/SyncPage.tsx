@@ -7,64 +7,78 @@ import folderIcon from "../../assets/icons/folder.svg";
 import compassIcon from "../../assets/icons/compass_calibration.svg";
 import aiAgentLogo from "../../assets/icons/ai-agent-large-dark.svg";
 
+import { invoke } from "@tauri-apps/api/core";
+
 interface FolderInfo {
     id: string;
     name: string;
     path: string;
-    lastScan: string;
-    syncEnabled: boolean;
-    autoSync: boolean; // This will now represent 'syncMode'
-    syncInterval: number; // in minutes: 1, 10, 30, 60
+    syncInterval: number;
     syncMode: 'proactive' | 'passive';
+    syncEnabled: boolean;
     linkedDevices: string[];
+    lastScan?: string; // Optional for UI display
 }
 
 interface DeviceInfo {
     id: string;
     name: string;
-    type: string;
-    status: "online" | "offline";
-    nodeId?: string;
+    deviceType: string;
+    nodeId: string;
+    status?: "online" | "offline";
 }
 
-const INITIAL_FOLDERS: FolderInfo[] = [];
-const INITIAL_DEVICES: DeviceInfo[] = [];
+interface SyncSettings {
+    localLogo?: string;
+    displayName?: string;
+}
 
 export function SyncPage() {
-    // Persistent State (v2 to clear old mock data)
-    const [folders, setFolders] = useState<FolderInfo[]>(() => {
-        const saved = localStorage.getItem('k2_sync_folders_v2');
-        return saved ? JSON.parse(saved) : INITIAL_FOLDERS;
-    });
-    const [devices, setDevices] = useState<DeviceInfo[]>(() => {
-        const saved = localStorage.getItem('k2_sync_devices_v2');
-        return saved ? JSON.parse(saved) : INITIAL_DEVICES;
-    });
-
-    useEffect(() => {
-        localStorage.setItem('k2_sync_folders_v2', JSON.stringify(folders));
-    }, [folders]);
-
-    useEffect(() => {
-        localStorage.setItem('k2_sync_devices_v2', JSON.stringify(devices));
-    }, [devices]);
-
+    const [folders, setFolders] = useState<FolderInfo[]>([]);
+    const [devices, setDevices] = useState<DeviceInfo[]>([]);
+    const [localLogo, setLocalLogo] = useState(syncLogo);
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
-    
-    // Logo states with persistence
-    const [localLogo, setLocalLogo] = useState(() => {
-        return localStorage.getItem('k2_sync_local_logo') || syncLogo;
-    });
 
+    // Initial Load from iroh-docs via Tauri
     useEffect(() => {
-        localStorage.setItem('k2_sync_local_logo', localLogo);
-    }, [localLogo]);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+        const loadAll = async () => {
+            try {
+                const [f, d, s] = await Promise.all([
+                    invoke<FolderInfo[]>('get_sync_folders'),
+                    invoke<DeviceInfo[]>('get_sync_devices'),
+                    invoke<SyncSettings>('get_sync_settings')
+                ]);
+                setFolders(f);
+                setDevices(d);
+                if (s.localLogo) setLocalLogo(s.localLogo);
+                console.log("[Sync] Loaded config from iroh-docs");
+            } catch (error) {
+                console.error("[Sync] Failed to load config:", error);
+            }
+        };
+        loadAll();
+    }, []);
 
-    // Edit states
+    // Helper to sync a single folder update to backend
+    const syncFolderToBackend = async (folder: FolderInfo) => {
+        try {
+            await invoke('add_sync_folder', { config: folder });
+        } catch (error) {
+            console.error("[Sync] Failed to save folder:", error);
+        }
+    };
+
+    // Helper to sync a single device update to backend
+    const syncDeviceToBackend = async (device: DeviceInfo) => {
+        try {
+            await invoke('add_sync_device', { config: device });
+        } catch (error) {
+            console.error("[Sync] Failed to save device:", error);
+        }
+    };
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
     const [isEditing, setIsEditing] = useState(false);
-    
-    // Add Device Dialog state
     const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false);
     const [newNodeId, setNewNodeId] = useState("");
     const [newDeviceName, setNewDeviceName] = useState("");
@@ -79,35 +93,46 @@ export function SyncPage() {
         const file = event.target.files?.[0];
         if (file) {
             const reader = new FileReader();
-            reader.onload = (e) => {
-                if (e.target?.result) setLocalLogo(e.target.result as string);
+            reader.onload = async (e) => {
+                if (e.target?.result) {
+                    const base64 = e.target.result as string;
+                    setLocalLogo(base64);
+                    try {
+                        await invoke('update_sync_settings', { settings: { localLogo: base64 } });
+                        console.log("[Sync] Logo updated in iroh-docs");
+                    } catch (err) {
+                        console.error("Failed to save logo:", err);
+                    }
+                }
             };
             reader.readAsDataURL(file);
         }
     };
 
-    const toggleDeviceSelection = (deviceId: string) => {
+    const toggleDeviceSelection = async (deviceId: string) => {
         if (!selectedFolderId || !isEditing) return;
         
-        setFolders(prev => prev.map(f => {
-            if (f.id === selectedFolderId) {
-                const newDevices = f.linkedDevices.includes(deviceId)
-                    ? f.linkedDevices.filter(id => id !== deviceId)
-                    : [...f.linkedDevices, deviceId];
-                return { ...f, linkedDevices: newDevices };
-            }
-            return f;
-        }));
+        const folder = folders.find(f => f.id === selectedFolderId);
+        if (!folder) return;
+
+        const newDevices = folder.linkedDevices.includes(deviceId)
+            ? folder.linkedDevices.filter(id => id !== deviceId)
+            : [...folder.linkedDevices, deviceId];
+            
+        const updatedFolder = { ...folder, linkedDevices: newDevices };
+        
+        setFolders(prev => prev.map(f => f.id === selectedFolderId ? updatedFolder : f));
+        await syncFolderToBackend(updatedFolder);
     };
 
-    const updateFolderOption = (key: keyof FolderInfo, value: any) => {
+    const updateFolderOption = async (key: keyof FolderInfo, value: any) => {
         if (!selectedFolderId) return;
-        setFolders(prev => prev.map(f => {
-            if (f.id === selectedFolderId) {
-                return { ...f, [key]: value };
-            }
-            return f;
-        }));
+        const folder = folders.find(f => f.id === selectedFolderId);
+        if (!folder) return;
+
+        const updatedFolder = { ...folder, [key]: value };
+        setFolders(prev => prev.map(f => f.id === selectedFolderId ? updatedFolder : f));
+        await syncFolderToBackend(updatedFolder);
     };
 
     const handleAddFolder = async () => {
@@ -131,16 +156,15 @@ export function SyncPage() {
                     id: `f-${Date.now()}`,
                     name: selected.split(/[\\/]/).pop() || "New Folder",
                     path: selected,
-                    lastScan: "Never",
                     syncEnabled: true,
-                    autoSync: true,
                     syncInterval: 10,
                     syncMode: 'proactive',
                     linkedDevices: []
                 };
                 setFolders([...folders, newFolder]);
+                await syncFolderToBackend(newFolder);
                 setSelectedFolderId(newFolder.id);
-                console.log("[Sync] Added folder:", newFolder);
+                console.log("[Sync] Added folder to iroh-docs:", newFolder);
             }
         } catch (error) {
             console.error("Failed to open folder dialog:", error);
@@ -168,10 +192,16 @@ export function SyncPage() {
             title: "Remove Folder",
             message: "Are you sure you want to remove this folder and its configuration from the sync list?",
             actionType: 'danger',
-            onConfirm: () => {
-                setFolders(prev => prev.filter(f => f.id !== id));
-                if (selectedFolderId === id) setSelectedFolderId(null);
-                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+            onConfirm: async () => {
+                try {
+                    await invoke('remove_sync_folder', { id });
+                    setFolders(prev => prev.filter(f => f.id !== id));
+                    if (selectedFolderId === id) setSelectedFolderId(null);
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                    console.log("[Sync] Removed folder from iroh-docs:", id);
+                } catch (error) {
+                    console.error("Failed to remove folder:", error);
+                }
             }
         });
     };
@@ -182,31 +212,52 @@ export function SyncPage() {
             title: "Remove Device",
             message: "Are you sure you want to remove this device from your list?",
             actionType: 'danger',
-            onConfirm: () => {
-                setDevices(prev => prev.filter(d => d.id !== id));
-                setFolders(prev => prev.map(f => ({
-                    ...f,
-                    linkedDevices: f.linkedDevices.filter(dId => dId !== id)
-                })));
-                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+            onConfirm: async () => {
+                try {
+                    // 1. Remove device from DB
+                    await invoke('remove_sync_device', { id });
+                    
+                    // 2. Filter device from all folders
+                    const updatedFolders = folders.map(f => ({
+                        ...f,
+                        linkedDevices: f.linkedDevices.filter(dId => dId !== id)
+                    }));
+
+                    // 3. Persist changed folders
+                    for (const folder of updatedFolders) {
+                        const original = folders.find(of => of.id === folder.id);
+                        if (original && original.linkedDevices.length !== folder.linkedDevices.length) {
+                            await syncFolderToBackend(folder);
+                        }
+                    }
+
+                    // 4. Update UI state
+                    setDevices(prev => prev.filter(d => d.id !== id));
+                    setFolders(updatedFolders);
+                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+                    console.log("[Sync] Removed device and cleaned up folders:", id);
+                } catch (error) {
+                    console.error("Failed to remove device:", error);
+                }
             }
         });
     };
 
-    const handleAddDevice = () => {
+    const handleAddDevice = async () => {
         if (!newNodeId || !newDeviceName) return;
         const newDevice: DeviceInfo = {
             id: `dev-${Date.now()}`,
             name: newDeviceName,
-            type: "Desktop",
+            deviceType: "Desktop",
             status: "offline",
             nodeId: newNodeId
         };
         setDevices([...devices, newDevice]);
+        await syncDeviceToBackend(newDevice);
         setIsAddDeviceOpen(false);
         setNewNodeId("");
         setNewDeviceName("");
-        console.log("[Sync] Registered device:", newDevice);
+        console.log("[Sync] Registered device to iroh-docs:", newDevice);
     };
 
     return (

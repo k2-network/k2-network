@@ -18,6 +18,7 @@ use crate::{K2DocsClient, K2DocHandle};
 
 /// Configuration for a synchronized folder (Stored in iroh-docs)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncFolderConfig {
     pub id: String,
     pub name: String,
@@ -30,6 +31,7 @@ pub struct SyncFolderConfig {
 
 /// Configuration for a peer device (Stored in iroh-docs)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncDeviceConfig {
     pub id: String,
     pub name: String,
@@ -39,6 +41,7 @@ pub struct SyncDeviceConfig {
 
 /// Global settings for the sync machine (Stored in iroh-docs)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct SyncSettings {
     pub local_logo: Option<String>, // Base64 or path, default to k2Logo in UI if None
     pub display_name: Option<String>,
@@ -57,6 +60,7 @@ pub struct SyncFolder {
 pub struct SyncManager {
     docs_client: K2DocsClient,
     active_folders: Arc<TokioMutex<HashMap<NamespaceId, SyncFolder>>>,
+    settings_handle: Arc<TokioMutex<Option<K2DocHandle>>>,
 }
 
 impl SyncManager {
@@ -64,15 +68,157 @@ impl SyncManager {
         Self {
             docs_client,
             active_folders: Arc::new(TokioMutex::new(HashMap::new())),
+            settings_handle: Arc::new(TokioMutex::new(None)),
         }
     }
+
+    /// Initialize the Sync Manager and load existing configurations
+    pub async fn init(&self) -> Result<()> {
+        let mut found_id = None;
+        let docs_list = self.docs_client.list_documents().await?;
+        
+        println!("[K2-Sync] 🔍 Scanning for existing sync settings doc (among {} docs)...", docs_list.len());
+        
+        for id in docs_list {
+            if let Some(h) = self.docs_client.open_doc(id).await? {
+                if let Ok(Some(marker)) = h.get(b"__k2_sync_settings_marker__").await {
+                    if marker == b"k2-sync-v1" {
+                        found_id = Some(id);
+                        println!("[K2-Sync] ✅ Found persistent sync settings: {}", id);
+                        break;
+                    }
+                }
+            }
+        }
+
+        let handle = if let Some(id) = found_id {
+            self.docs_client.open_doc(id).await?.unwrap()
+        } else {
+            println!("[K2-Sync] ✨ Creating new persistent sync settings doc...");
+            let h = self.docs_client.create_doc().await?;
+            h.put(b"__k2_sync_settings_marker__", b"k2-sync-v1").await?;
+            h
+        };
+
+        {
+            let mut guard = self.settings_handle.lock().await;
+            *guard = Some(handle);
+        }
+        
+        // Auto-start active folders from config
+        self.start_configured_folders().await?;
+        
+        Ok(())
+    }
+
+    async fn handle(&self) -> Result<K2DocHandle> {
+        let guard = self.settings_handle.lock().await;
+        guard.as_ref()
+            .cloned()
+            .ok_or_else(|| anyhow::anyhow!("SyncManager not initialized"))
+    }
+
+    /// Start all folders that are enabled in the configuration
+    async fn start_configured_folders(&self) -> Result<()> {
+        let folders = self.list_folders().await?;
+        if folders.is_empty() {
+            println!("[K2-Sync] ℹ️ No configured folders to start.");
+            return Ok(());
+        }
+        
+        println!("[K2-Sync] 📂 Starting {} configured folders...", folders.len());
+        for config in folders {
+            if config.sync_enabled && config.path.exists() {
+                if let Ok(doc_id) = config.id.parse::<NamespaceId>() {
+                    let _ = self.register_folder(config.path, doc_id).await;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    // --- CONFIGURATION MANAGEMENT ---
+
+    pub async fn list_folders(&self) -> Result<Vec<SyncFolderConfig>> {
+        let results = self.handle().await?.list_prefix(b"folder:").await?;
+        let mut folders = Vec::new();
+        for (_key, value) in results {
+            if let Ok(config) = serde_json::from_slice::<SyncFolderConfig>(&value) {
+                folders.push(config);
+            }
+        }
+        Ok(folders)
+    }
+
+    pub async fn add_folder_config(&self, config: SyncFolderConfig) -> Result<()> {
+        let key = format!("folder:{}", config.id);
+        self.handle().await?.put_json(key.as_bytes(), &config).await?;
+        
+        // If enabled, register it
+        if config.sync_enabled && config.path.exists() {
+             if let Ok(doc_id) = config.id.parse::<NamespaceId>() {
+                let _ = self.register_folder(config.path, doc_id).await;
+            }
+        }
+        Ok(())
+    }
+
+    pub async fn remove_folder_config(&self, id: &str) -> Result<()> {
+        let key = format!("folder:{}", id);
+        self.handle().await?.delete(key.as_bytes()).await?;
+        
+        // Also stop active sync if running
+        if let Ok(doc_id) = id.parse::<NamespaceId>() {
+            let mut active = self.active_folders.lock().await;
+            active.remove(&doc_id);
+        }
+        Ok(())
+    }
+
+    pub async fn list_devices(&self) -> Result<Vec<SyncDeviceConfig>> {
+        let results = self.handle().await?.list_prefix(b"device:").await?;
+        let mut devices = Vec::new();
+        for (_key, value) in results {
+            if let Ok(config) = serde_json::from_slice::<SyncDeviceConfig>(&value) {
+                devices.push(config);
+            }
+        }
+        Ok(devices)
+    }
+
+    pub async fn add_device_config(&self, config: SyncDeviceConfig) -> Result<()> {
+        let key = format!("device:{}", config.id);
+        self.handle().await?.put_json(key.as_bytes(), &config).await?;
+        Ok(())
+    }
+
+    pub async fn remove_device_config(&self, id: &str) -> Result<()> {
+        let key = format!("device:{}", id);
+        self.handle().await?.delete(key.as_bytes()).await?;
+        Ok(())
+    }
+
+    pub async fn get_settings(&self) -> Result<SyncSettings> {
+        let settings: Option<SyncSettings> = self.handle().await?.get_json(b"settings").await?;
+        Ok(settings.unwrap_or(SyncSettings { local_logo: None, display_name: None }))
+    }
+
+    pub async fn update_settings(&self, settings: SyncSettings) -> Result<()> {
+        self.handle().await?.put_json(b"settings", &settings).await
+    }
+
+    // --- ACTIVE SYNC LOGIC ---
 
     /// Register and start syncing a local folder with a document
     pub async fn register_folder(&self, path: PathBuf, doc_id: NamespaceId) -> Result<()> {
         let author_id = self.docs_client.default_author().await?;
         
         // Ensure path is absolute
-        let abs_path = std::fs::canonicalize(&path).context("Failed to get absolute path")?;
+        let abs_path = if path.is_absolute() {
+            path
+        } else {
+            std::fs::canonicalize(&path).context("Failed to get absolute path")?
+        };
         
         let folder = SyncFolder {
             path: abs_path.clone(),

@@ -375,6 +375,7 @@ impl K2Node {
 
         // Create sync manager
         let sync_manager = SyncManager::new(docs_client.clone());
+        sync_manager.init().await.context("Failed to initialize sync manager")?;
 
         Ok(Self {
             endpoint,
