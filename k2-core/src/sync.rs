@@ -630,10 +630,12 @@ impl SyncManager {
                     if let Ok(Some(meta)) = handle.get_json::<SyncFileMeta>(meta_key.as_bytes()).await {
                         let ft = FileTime::from_unix_time(meta.mtime as i64, 0);
                         let _ = filetime::set_file_mtime(&file_path, ft);
-                        println!("[K2-Sync] 📅 Set mtime for new file {}: {}", rel_path, meta.mtime);
+                        // println!("[K2-Sync] 📅 Set mtime for new file {}: {}", rel_path, meta.mtime);
                     }
                 }
-                Err(_) => {}
+                Err(e) => {
+                    eprintln!("[K2-Sync] ❌ Export failed for {}: {:?}", rel_path, e);
+                }
             }
         }
         
@@ -668,12 +670,16 @@ impl SyncManager {
         println!("[K2-Sync] 🛰️ Registered sync folder: {:?} -> {}", abs_path, doc_id);
 
         // 1. Initial scan (first-time hash calculation - push local to remote)
-        self.sync_local_to_remote(doc_id).await?;
+        println!("[K2-Sync] 🔍 Starting initial scan for {}...", doc_id);
+        if let Err(e) = self.sync_local_to_remote(doc_id).await {
+            eprintln!("[K2-Sync] ❌ Initial scan failed for {}: {:?}", doc_id, e);
+        }
         
         // 1.5. Initial reconcile (pull remote to local disk)
         let _ = self.reconcile_remote_to_local(doc_id).await;
         
         // 2. Start local file watcher (real-time detection)
+        println!("[K2-Sync] 🕵️ Starting watcher for {}...", doc_id);
         self.spawn_watcher(doc_id).await?;
         
         // 3. Start remote event listener (download from peers)
@@ -682,6 +688,7 @@ impl SyncManager {
         // 4. Start interval-based sync loop
         self.spawn_sync_loop(doc_id).await?;
 
+        println!("[K2-Sync] ✅ Folder {} is now fully active.", doc_id);
         Ok(())
     }
 
@@ -1018,10 +1025,14 @@ impl SyncManager {
                 }
             }).expect("Failed to create watcher");
 
-            watcher.watch(&root, RecursiveMode::Recursive).expect("Failed to start watch");
-            println!("[K2-Sync] 👀 Watching for local changes in {:?}", root);
+            if let Err(e) = watcher.watch(&root, RecursiveMode::Recursive) {
+                eprintln!("[K2-Sync] ❌ Watcher failed to start for {:?}: {:?}", root, e);
+                return;
+            }
+            println!("[K2-Sync] 👀 Watcher ACTIVE for {:?}", root);
 
             while let Some(event) = rx.recv().await {
+                // println!("[K2-Sync] 🔬 Raw Watcher Event: {:?}", event.kind); // Debugging
                 // Check if folder is still active
                 {
                     let folders = manager.active_folders.lock().await;
@@ -1196,11 +1207,6 @@ impl SyncManager {
                                     }
 
                                     // 3. Export to disk
-                                    // Ensure directory exists
-                                    if let Some(parent) = target_path.parent() {
-                                        let _ = tokio::fs::create_dir_all(parent).await;
-                                    }
-                                    
                                     if let Err(e) = manager.blob_client.export(hash, target_path.clone()).await {
                                         eprintln!("[K2-Sync] ❌ Error exporting {}: {:?}", key, e);
                                     } else {
