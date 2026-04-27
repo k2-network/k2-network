@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
+import { open } from "@tauri-apps/plugin-dialog";
 import "./SyncPage.css";
 import fragmentIcon from "../../assets/icons/fragment.svg";
 import k2Logo from "../../assets/icons/k2-logo.svg";
 import syncLogo from "../../assets/sync-logo.svg";
 import folderIcon from "../../assets/icons/folder.svg";
-import compassIcon from "../../assets/icons/compass_calibration.svg";
-import aiAgentLogo from "../../assets/icons/ai-agent-large-dark.svg";
 
 import { invoke } from "@tauri-apps/api/core";
 
@@ -16,8 +15,21 @@ interface FolderInfo {
     syncInterval: number;
     syncMode: 'proactive' | 'passive';
     syncEnabled: boolean;
-    linkedDevices: string[];
-    lastScan?: string; // Optional for UI display
+    linkedDevices: Record<string, string>; // NodeID -> Status
+    status: 'Idle' | 'Pending' | 'Syncing' | { Error: string };
+    lastScan?: string;
+    isPending?: boolean;
+    remoteSource?: string;
+}
+
+interface BackendDeviceInfo {
+    config: {
+        id: string;
+        name: string;
+        deviceType: string;
+        nodeId: string;
+    };
+    status: string;
 }
 
 interface DeviceInfo {
@@ -25,7 +37,7 @@ interface DeviceInfo {
     name: string;
     deviceType: string;
     nodeId: string;
-    status?: "online" | "offline";
+    status: "online" | "offline";
 }
 
 interface SyncSettings {
@@ -38,6 +50,7 @@ export function SyncPage() {
     const [devices, setDevices] = useState<DeviceInfo[]>([]);
     const [localLogo, setLocalLogo] = useState(syncLogo);
     const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
+    const [toastMessage, setToastMessage] = useState<string | null>(null);
 
     // Initial Load from iroh-docs via Tauri
     useEffect(() => {
@@ -45,24 +58,64 @@ export function SyncPage() {
             try {
                 const [f, d, s] = await Promise.all([
                     invoke<FolderInfo[]>('get_sync_folders'),
-                    invoke<DeviceInfo[]>('get_sync_devices'),
+                    invoke<BackendDeviceInfo[]>('get_sync_devices'),
                     invoke<SyncSettings>('get_sync_settings')
                 ]);
                 setFolders(f);
-                setDevices(d);
+                setDevices(d.map(b => ({
+                    id: b.config.id,
+                    name: b.config.name,
+                    deviceType: b.config.deviceType,
+                    nodeId: b.config.nodeId,
+                    status: b.status as 'online' | 'offline'
+                })));
                 if (s.localLogo) setLocalLogo(s.localLogo);
-                console.log("[Sync] Loaded config from iroh-docs");
+                console.log("[Sync] Loaded config and status from core");
             } catch (error) {
-                console.error("[Sync] Failed to load config:", error);
+                console.error("[Sync] Failed to load initial state:", error);
             }
         };
         loadAll();
+
+        // Start polling for status updates every 3 seconds
+        const pollInterval = setInterval(async () => {
+            try {
+                const [updatedFolders, updatedDevices] = await Promise.all([
+                    invoke<FolderInfo[]>('get_sync_folders'),
+                    invoke<BackendDeviceInfo[]>('get_sync_devices')
+                ]);
+                setFolders(updatedFolders);
+                setDevices(updatedDevices.map(b => ({
+                    id: b.config.id,
+                    name: b.config.name,
+                    deviceType: b.config.deviceType,
+                    nodeId: b.config.nodeId,
+                    status: b.status as 'online' | 'offline'
+                })));
+            } catch (err) {
+                console.error("[Sync] Polling error:", err);
+            }
+        }, 3000);
+
+        return () => clearInterval(pollInterval);
     }, []);
 
+    const showToast = (msg: string) => {
+        setToastMessage(msg);
+        setTimeout(() => setToastMessage(null), 3000);
+    };
+
     // Helper to sync a single folder update to backend
+
     const syncFolderToBackend = async (folder: FolderInfo) => {
         try {
-            await invoke('add_sync_folder', { config: folder });
+            // Clean up any "undefined" keys that might have leaked into the state
+            const cleanedLinkedDevices = { ...folder.linkedDevices };
+            if ("undefined" in cleanedLinkedDevices) delete cleanedLinkedDevices["undefined"];
+            if (undefined in cleanedLinkedDevices) delete cleanedLinkedDevices[undefined as any];
+            
+            const cleanedFolder = { ...folder, linkedDevices: cleanedLinkedDevices };
+            await invoke('add_sync_folder', { config: cleanedFolder });
         } catch (error) {
             console.error("[Sync] Failed to save folder:", error);
         }
@@ -82,6 +135,8 @@ export function SyncPage() {
     const [isAddDeviceOpen, setIsAddDeviceOpen] = useState(false);
     const [newNodeId, setNewNodeId] = useState("");
     const [newDeviceName, setNewDeviceName] = useState("");
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [testResult, setTestResult] = useState<'success' | 'fail' | null>(null);
 
     const selectedFolder = folders.find(f => f.id === selectedFolderId);
 
@@ -109,18 +164,20 @@ export function SyncPage() {
         }
     };
 
-    const toggleDeviceSelection = async (deviceId: string) => {
+    const toggleDeviceSelection = async (nodeId: string) => {
         if (!selectedFolderId || !isEditing) return;
         
         const folder = folders.find(f => f.id === selectedFolderId);
         if (!folder) return;
 
-        const newDevices = folder.linkedDevices.includes(deviceId)
-            ? folder.linkedDevices.filter(id => id !== deviceId)
-            : [...folder.linkedDevices, deviceId];
+        const newLinkedDevices = { ...folder.linkedDevices };
+        if (newLinkedDevices[nodeId]) {
+            delete newLinkedDevices[nodeId];
+        } else {
+            newLinkedDevices[nodeId] = "NotSent";
+        }
             
-        const updatedFolder = { ...folder, linkedDevices: newDevices };
-        
+        const updatedFolder = { ...folder, linkedDevices: newLinkedDevices };
         setFolders(prev => prev.map(f => f.id === selectedFolderId ? updatedFolder : f));
         await syncFolderToBackend(updatedFolder);
     };
@@ -138,7 +195,7 @@ export function SyncPage() {
     const handleAddFolder = async () => {
         try {
             // @ts-ignore - Tauri API
-            const selected = await window.__TAURI__.dialog.open({
+            const selected = await open({
                 directory: true,
                 multiple: false,
                 title: 'Select Folder to Sync'
@@ -157,17 +214,55 @@ export function SyncPage() {
                     name: selected.split(/[\\/]/).pop() || "New Folder",
                     path: selected,
                     syncEnabled: true,
-                    syncInterval: 10,
-                    syncMode: 'proactive',
-                    linkedDevices: []
+                    syncInterval: 60,
+                    syncMode: 'passive',
+                    linkedDevices: {},
+                    status: 'Idle'
                 };
-                setFolders([...folders, newFolder]);
-                await syncFolderToBackend(newFolder);
+                
+                // Update UI Optimistically (but without the real ID yet)
+                setFolders(prev => [...prev, newFolder]);
                 setSelectedFolderId(newFolder.id);
-                console.log("[Sync] Added folder to iroh-docs:", newFolder);
+                setIsEditing(true);
+                
+                try {
+                    // Get real ID from Backend
+                    const realId = await invoke<string>('add_sync_folder', { config: newFolder });
+                    
+                    // Immediately re-fetch all folders to get correct data
+                    const updatedFolders = await invoke<FolderInfo[]>('get_sync_folders');
+                    setFolders(updatedFolders);
+                    setSelectedFolderId(realId); // Select the real folder
+                } catch (error) {
+                    console.error("[Sync] Error adding folder:", error);
+                    // Revert optimistic update
+                    setFolders(prev => prev.filter(f => f.id !== newFolder.id));
+                    setSelectedFolderId(null);
+                }
             }
         } catch (error) {
             console.error("Failed to open folder dialog:", error);
+        }
+    };
+
+    const handleAcceptFolder = async (folderId: string) => {
+        try {
+            const selected = await open({
+                directory: true,
+                multiple: false,
+                title: "Select Local Path for Shared Folder"
+            });
+
+            if (selected && typeof selected === 'string') {
+                await invoke("accept_sync_folder", { folderId, localPath: selected });
+                // Re-fetch folders to update the UI from pending to active
+                const updatedFolders: FolderInfo[] = await invoke("get_sync_folders");
+                setFolders(updatedFolders);
+                setSelectedFolderId(folderId);
+            }
+        } catch (error) {
+            console.error("Failed to accept folder:", error);
+            alert("Failed to accept folder: " + error);
         }
     };
 
@@ -186,24 +281,46 @@ export function SyncPage() {
         onConfirm: () => {}
     });
 
-    const handleRemoveFolder = (id: string) => {
+    const handleRemoveFolder = async (id: string) => {
         setConfirmDialog({
             isOpen: true,
-            title: "Remove Folder",
-            message: "Are you sure you want to remove this folder and its configuration from the sync list?",
+            title: "Remove Sync Folder",
+            message: "Are you sure you want to stop syncing this folder? This will only remove the sync configuration, not your local files.",
             actionType: 'danger',
             onConfirm: async () => {
                 try {
                     await invoke('remove_sync_folder', { id });
+                    setSelectedFolderId(null);
                     setFolders(prev => prev.filter(f => f.id !== id));
-                    if (selectedFolderId === id) setSelectedFolderId(null);
-                    setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-                    console.log("[Sync] Removed folder from iroh-docs:", id);
                 } catch (error) {
-                    console.error("Failed to remove folder:", error);
+                    console.error("[Sync] Failed to remove folder:", error);
                 }
+                setConfirmDialog(prev => ({ ...prev, isOpen: false }));
             }
         });
+    };
+
+    const handleAcceptInvitation = async (folderId: string) => {
+        // @ts-ignore - Tauri API
+        const path = await open({
+            directory: true,
+            multiple: false,
+            title: "Select Folder to Sync"
+        });
+
+        if (path && typeof path === 'string') {
+            try {
+                await invoke('accept_sync_folder', { folderId, localPath: path });
+                // Refresh folder list
+                const updatedFolders = await invoke<FolderInfo[]>('get_sync_folders');
+                setFolders(updatedFolders);
+                // Update selected folder
+                const newSelected = updatedFolders.find(f => f.id === folderId);
+                if (newSelected) setSelectedFolderId(newSelected.id);
+            } catch (error) {
+                console.error("[Sync] Failed to accept invitation:", error);
+            }
+        }
     };
 
     const handleRemoveDevice = (id: string) => {
@@ -218,10 +335,15 @@ export function SyncPage() {
                     await invoke('remove_sync_device', { id });
                     
                     // 2. Filter device from all folders
-                    const updatedFolders = folders.map(f => ({
-                        ...f,
-                        linkedDevices: f.linkedDevices.filter(dId => dId !== id)
-                    }));
+                    const updatedFolders = folders.map(f => {
+                        const newLinked = { ...f.linkedDevices };
+                        // Find and remove by nodeId if the id matches
+                        const deviceToRemove = devices.find(d => d.id === id);
+                        if (deviceToRemove) {
+                            delete newLinked[deviceToRemove.nodeId];
+                        }
+                        return { ...f, linkedDevices: newLinked };
+                    });
 
                     // 3. Persist changed folders
                     for (const folder of updatedFolders) {
@@ -259,9 +381,47 @@ export function SyncPage() {
         setNewDeviceName("");
         console.log("[Sync] Registered device to iroh-docs:", newDevice);
     };
+    const handleTestConnection = async () => {
+        if (!newNodeId) return;
+        setIsTestingConnection(true);
+        setTestResult(null);
+        try {
+            const isOnline = await invoke<boolean>('test_sync_device', { nodeId: newNodeId });
+            setTestResult(isOnline ? 'success' : 'fail');
+        } catch (err) {
+            console.error("Test connection failed:", err);
+            setTestResult('fail');
+        } finally {
+            setIsTestingConnection(false);
+        }
+    };
+
+    const handleSyncNow = async (id: string) => {
+        try {
+            console.log(`[Sync] Manually triggering sync for ${id}`);
+            await invoke('sync_now', { id });
+            showToast("Sync completed successfully!");
+        } catch (err) {
+            console.error("Failed to sync now:", err);
+            alert("Sync failed: " + err);
+        }
+    };
+
+    const getStatusText = (status: FolderInfo['status']) => {
+        if (status === 'Idle') return 'Up to date';
+        if (status === 'Syncing') return 'Syncing...';
+        if (status === 'Pending') return 'Changes pending';
+        if (typeof status === 'object' && 'Error' in status) return `Error: ${status.Error}`;
+        return status;
+    };
 
     return (
         <div className="sync-page-v2">
+            {toastMessage && (
+                <div className="sync-toast">
+                    {toastMessage}
+                </div>
+            )}
             <div className="sync-layout-v2">
                 {/* Local Folder Column */}
                 <div className="sync-column local">
@@ -280,8 +440,9 @@ export function SyncPage() {
                             {folders.map(f => (
                                 <div 
                                     key={f.id} 
-                                    className={`sync-list-item ${selectedFolderId === f.id ? 'active' : ''}`}
+                                    className={`sync-list-item ${selectedFolderId === f.id ? 'active' : ''} ${f.isPending ? 'pending' : ''}`}
                                     onClick={() => { 
+                                        if (f.isPending) return; // Don't select pending folders yet
                                         if (selectedFolderId === f.id) {
                                             setSelectedFolderId(null);
                                         } else {
@@ -292,9 +453,21 @@ export function SyncPage() {
                                 >
                                     <div className="sync-item-left">
                                         <img src={folderIcon} className="sync-folder-icon" alt="" />
-                                        <span className="sync-item-name">{f.name}</span>
+                                        <div className="sync-item-text-wrapper">
+                                            <span className="sync-item-name">{f.name}</span>
+                                            {f.isPending && <span className="sync-item-sub">Invite from Network</span>}
+                                        </div>
                                     </div>
-                                    <div className={`sync-item-status-dot ${f.syncEnabled ? 'syncing' : 'paused'}`}></div>
+                                    {f.isPending ? (
+                                        <button 
+                                            className="sync-accept-badge" 
+                                            onClick={(e) => { e.stopPropagation(); handleAcceptFolder(f.id); }}
+                                        >
+                                            Accept
+                                        </button>
+                                    ) : (
+                                        <div className={`sync-item-status-dot ${f.syncEnabled ? 'syncing' : 'paused'}`}></div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -340,12 +513,12 @@ export function SyncPage() {
                         </div>
                         <div className="sync-item-list">
                             {devices.map(d => {
-                                const isLinked = selectedFolder?.linkedDevices.includes(d.id);
+                                const isLinked = selectedFolder?.linkedDevices ? d.nodeId in selectedFolder.linkedDevices : false;
                                 return (
                                     <div 
                                         key={d.id} 
                                         className={`sync-list-item ${isLinked ? 'highlighted' : ''}`}
-                                        onClick={() => toggleDeviceSelection(d.id)}
+                                        onClick={() => toggleDeviceSelection(d.nodeId)}
                                     >
                                         <div className="sync-device-select-v2">
                                             {isEditing && (
@@ -441,20 +614,75 @@ export function SyncPage() {
                             )}
                         </div>
 
-                        <div className="sync-info-field">
+                        <div className="sync-info-field full-width">
                             <label>SYNC TARGETS</label>
-                            <span>{selectedFolder.linkedDevices.length} Devices</span>
+                            <div className="sync-targets-list">
+                                {devices.map(device => {
+                                    const status = selectedFolder.linkedDevices[device.nodeId];
+                                    const isLinked = !!status;
+                                    
+                                    return (
+                                        <div 
+                                            key={device.id} 
+                                            className={`device-toggle-card ${isLinked ? 'active' : ''} ${isEditing ? 'editable' : 'readonly'}`}
+                                            onClick={() => toggleDeviceSelection(device.nodeId)}
+                                        >
+                                            <div className="device-avatar">
+                                                {device.name.charAt(0)}
+                                            </div>
+                                            <div className="device-info-mini">
+                                                <span className="dev-name">{device.name}</span>
+                                                <span className="dev-type">{device.deviceType}</span>
+                                                {isLinked && <span className="dev-status-badge">{status}</span>}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="sync-info-field full-width">
+                            <label>CURRENT STATUS</label>
+                            <div className={`sync-status-badge ${typeof selectedFolder.status === 'string' ? selectedFolder.status.toLowerCase() : 'error'}`}>
+                                {getStatusText(selectedFolder.status)}
+                            </div>
                         </div>
                     </div>
 
                     <div className="sync-modal-footer">
-                        {isEditing ? (
-                            <button className="sync-k2-btn primary" onClick={() => setIsEditing(false)}>Save Changes</button>
+                        {selectedFolder.isPending ? (
+                            <button 
+                                className="sync-k2-btn primary" 
+                                onClick={() => handleAcceptInvitation(selectedFolder.id)}
+                            >
+                                Accept & Choose Folder
+                            </button>
+                        ) : isEditing ? (
+                            <button 
+                                className="sync-k2-btn primary" 
+                                onClick={async () => {
+                                    if (selectedFolder) await syncFolderToBackend(selectedFolder);
+                                    setIsEditing(false);
+                                }}
+                            >
+                                Save Changes
+                            </button>
                         ) : (
                             <>
-                                <button className="sync-k2-btn">{selectedFolder.syncEnabled ? 'Pause' : 'Resume'}</button>
-                                <button className="sync-k2-btn primary">Sync Now</button>
-                                <button className="sync-k2-btn" onClick={() => setIsEditing(true)}>Edit Sync</button>
+                                <button 
+                                    className={`sync-k2-btn ${selectedFolder.syncEnabled ? '' : 'primary'}`}
+                                    onClick={() => updateFolderOption('syncEnabled', !selectedFolder.syncEnabled)}
+                                >
+                                    {selectedFolder.syncEnabled ? 'Pause Sync' : 'Resume Sync'}
+                                </button>
+                                <button 
+                                    className="sync-k2-btn primary" 
+                                    onClick={() => handleSyncNow(selectedFolder.id)}
+                                    disabled={selectedFolder.status === 'Syncing'}
+                                >
+                                    {selectedFolder.status === 'Syncing' ? 'Syncing...' : 'Sync Now'}
+                                </button>
+                                <button className="sync-k2-btn" onClick={() => setIsEditing(true)}>Edit Configuration</button>
                             </>
                         )}
                     </div>
@@ -469,12 +697,26 @@ export function SyncPage() {
                         <div className="sync-modal-body">
                             <div className="sync-input-group">
                                 <label>Node ID</label>
-                                <input 
-                                    type="text" 
-                                    placeholder="Enter peer node-id (hex)..." 
-                                    value={newNodeId}
-                                    onChange={e => setNewNodeId(e.target.value)}
-                                />
+                                <div className="sync-input-wrapper">
+                                    <input 
+                                        type="text" 
+                                        placeholder="Enter peer node-id (hex)..." 
+                                        value={newNodeId}
+                                        onChange={e => { setNewNodeId(e.target.value); setTestResult(null); }}
+                                    />
+                                    <button 
+                                        className={`sync-test-btn ${testResult || ''}`}
+                                        onClick={handleTestConnection}
+                                        disabled={isTestingConnection || !newNodeId}
+                                    >
+                                        {isTestingConnection ? 'Testing...' : 'Test'}
+                                    </button>
+                                </div>
+                                {testResult && (
+                                    <div className={`sync-item-sub ${testResult}`} style={{ marginTop: '6px', fontWeight: 'bold' }}>
+                                        {testResult === 'success' ? '● Device is ONLINE' : '○ Device is OFFLINE or ID is invalid'}
+                                    </div>
+                                )}
                             </div>
                             <div className="sync-input-group">
                                 <label>Device Name</label>
@@ -487,7 +729,7 @@ export function SyncPage() {
                             </div>
                         </div>
                         <div className="sync-modal-footer">
-                            <button className="sync-k2-btn" onClick={() => setIsAddDeviceOpen(false)}>Cancel</button>
+                            <button className="sync-k2-btn" onClick={() => { setIsAddDeviceOpen(false); setTestResult(null); }}>Cancel</button>
                             <button className="sync-k2-btn primary" onClick={handleAddDevice}>Register Device</button>
                         </div>
                     </div>

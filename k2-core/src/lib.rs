@@ -10,7 +10,7 @@
 
 use anyhow::{Context, Result};
 use iroh::{
-    discovery::pkarr::dht::DhtDiscovery,
+    discovery::{pkarr::dht::DhtDiscovery, ConcurrentDiscovery, mdns::MdnsDiscovery},
     protocol::Router,
     Endpoint, EndpointId, SecretKey,
 };
@@ -315,14 +315,20 @@ impl K2Node {
         let secret_key = IdentityManager::load_or_generate()
             .context("Failed to load or generate identity")?;
         
-        // Create DHT discovery builder
-        let discovery = DhtDiscovery::builder()
+        // Create DHT discovery (Global)
+        let dht_discovery = DhtDiscovery::builder()
             .n0_dns_pkarr_relay()
             .dht(true)
             .include_direct_addresses(true)
             .secret_key(secret_key.clone())
             .build()
             .context("Failed to build DHT discovery")?;
+        
+        // Combine with Local Discovery (mDNS) for instant local detection
+        let discovery = ConcurrentDiscovery::from_services(vec![
+            Box::new(dht_discovery),
+            Box::new(MdnsDiscovery::builder().build(secret_key.public().into())?),
+        ]);
         
         // Create endpoint with blobs, gossip, docs, and discovery ALPNs
         let endpoint = Endpoint::builder()
@@ -333,6 +339,7 @@ impl K2Node {
                 GOSSIP_ALPN.to_vec(), 
                 DISCOVERY_ALPN.to_vec(),
                 DOCS_ALPN.to_vec(),
+                SYNC_INVITE_ALPN.to_vec(),
             ])
             .bind()
             .await
@@ -356,26 +363,27 @@ impl K2Node {
             .await
             .context("Failed to create persistent docs")?;
         
-        // Build router with all protocols
-        let router = Router::builder(endpoint.clone())
-            .accept(iroh_blobs::ALPN, blobs.clone())
-            .accept(GOSSIP_ALPN, gossip.clone())
-            .accept(DOCS_ALPN, docs.clone())
-            .spawn();
-        
         // Create docs client (FsStore derefs to api::Store)
         let docs_client = K2DocsClient::new(docs.clone(), store.clone());
         
         // Create blobs client
         let blob_client = K2Blob::new((*store).clone(), endpoint.clone());
 
+        // Create sync manager
+        let sync_manager = SyncManager::new(docs_client.clone(), blob_client.clone(), endpoint.clone());
+        sync_manager.init().await.context("Failed to initialize sync manager")?;
+
+        // Build router with all protocols
+        let router = Router::builder(endpoint.clone())
+            .accept(iroh_blobs::ALPN, blobs.clone())
+            .accept(GOSSIP_ALPN, gossip.clone())
+            .accept(DOCS_ALPN, docs.clone())
+            .accept(SYNC_INVITE_ALPN, SyncInviteProtocol::new(sync_manager.clone()))
+            .spawn();
+        
         // Create profile manager
         let mut profile_manager = ProfileManager::new(docs_client.clone(), blob_client.clone());
         profile_manager.init().await.context("Failed to initialize profile manager")?;
-
-        // Create sync manager
-        let sync_manager = SyncManager::new(docs_client.clone());
-        sync_manager.init().await.context("Failed to initialize sync manager")?;
 
         Ok(Self {
             endpoint,
@@ -449,7 +457,7 @@ impl K2Node {
 
     /// Share a file and return ticket string
     pub async fn share_file(&self, path: &Path) -> Result<String> {
-        let hash = self.blob_client.add_file(path.to_path_buf()).await?;
+        let (hash, _size) = self.blob_client.add_file(path.to_path_buf()).await?;
         let ticket = self.blob_client.create_ticket(hash).await?;
         
         let filename = path.file_name()

@@ -9,12 +9,13 @@ use iroh_blobs::{
     ticket::BlobTicket,
     Hash, BlobFormat,
 };
+use iroh_blobs::api::blobs::{ImportMode, AddPathOptions};
 use std::path::PathBuf;
 use std::str::FromStr;
 use futures::StreamExt;
 
 /// K2Blob: P2P Data Management using iroh-blobs API
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct K2Blob {
     store: Store,
     endpoint: Endpoint,
@@ -32,10 +33,26 @@ impl K2Blob {
         Ok(tag.hash)
     }
 
-    /// Add file from path to local store
-    pub async fn add_file(&self, path: PathBuf) -> Result<Hash> {
-        let tag = self.store.blobs().add_path(path).await?;
-        Ok(tag.hash)
+    /// Add file from path to local store using Reference mode (zero-copy)
+    pub async fn add_file(&self, path: PathBuf) -> Result<(Hash, u64)> {
+        println!("[K2-Blob] 🔍 Indexing file: {:?}", path);
+        
+        // Use add_path_with_opts to specify ImportMode::TryReference
+        let options = AddPathOptions {
+            path: path.clone(),
+            format: BlobFormat::Raw,
+            mode: ImportMode::TryReference,
+        };
+        let tag = self.store.blobs().add_path_with_opts(options).await?;
+        
+        // Get size for the hash
+        let size = match self.store.blobs().status(tag.hash).await? {
+            iroh_blobs::api::blobs::BlobStatus::Complete { size } => size,
+            _ => 0,
+        };
+        
+        println!("[K2-Blob] ✅ Indexed: {} (Size: {} bytes)", tag.hash, size);
+        Ok((tag.hash, size))
     }
 
     /// Get bytes from local store by hash

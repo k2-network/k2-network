@@ -854,16 +854,28 @@ async fn start_listening(topic: String, app_handle: tauri::AppHandle, state: Sta
 // ============ SYNC COMMANDS (iroh-docs) ============
 
 #[tauri::command]
-async fn get_sync_folders(state: State<'_, AppState>) -> Result<Vec<k2_core::SyncFolderConfig>, String> {
+async fn get_sync_folders(state: State<'_, AppState>) -> Result<Vec<k2_core::SyncFolderInfo>, String> {
     let node = {
         let guard = state.node.lock().unwrap();
         guard.clone().ok_or("Node not initialized")?
     };
-    node.sync().list_folders().await.map_err(format_error)
+    node.sync().get_all_folders_info().await.map_err(format_error)
 }
 
 #[tauri::command]
-async fn add_sync_folder(config: k2_core::SyncFolderConfig, state: State<'_, AppState>) -> Result<(), String> {
+async fn sync_now(id: String, state: State<'_, AppState>) -> Result<(), String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.sync().sync_now(&id).await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn add_sync_folder(config: k2_core::SyncFolderConfig, state: State<'_, AppState>) -> Result<String, String> {
+    println!("[TRACE] 📥 Frontend called add_sync_folder for '{}'", config.name);
+    println!("[TRACE] 🔗 Linked Devices in request: {:?}", config.linked_devices);
+    
     let node = {
         let guard = state.node.lock().unwrap();
         guard.clone().ok_or("Node not initialized")?
@@ -881,7 +893,7 @@ async fn remove_sync_folder(id: String, state: State<'_, AppState>) -> Result<()
 }
 
 #[tauri::command]
-async fn get_sync_devices(state: State<'_, AppState>) -> Result<Vec<k2_core::SyncDeviceConfig>, String> {
+async fn get_sync_devices(state: State<'_, AppState>) -> Result<Vec<k2_core::SyncDeviceInfo>, String> {
     let node = {
         let guard = state.node.lock().unwrap();
         guard.clone().ok_or("Node not initialized")?
@@ -891,11 +903,16 @@ async fn get_sync_devices(state: State<'_, AppState>) -> Result<Vec<k2_core::Syn
 
 #[tauri::command]
 async fn add_sync_device(config: k2_core::SyncDeviceConfig, state: State<'_, AppState>) -> Result<(), String> {
+    println!("[TRACE] 📥 add_sync_device called for '{}' ({})", config.name, config.node_id);
     let node = {
         let guard = state.node.lock().unwrap();
         guard.clone().ok_or("Node not initialized")?
     };
-    node.sync().add_device_config(config).await.map_err(format_error)
+    
+    let node_id = config.node_id.clone();
+    let sync_manager = node.sync().clone();
+    node.sync().add_device_config(config).await.map_err(format_error)?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -905,6 +922,15 @@ async fn remove_sync_device(id: String, state: State<'_, AppState>) -> Result<()
         guard.clone().ok_or("Node not initialized")?
     };
     node.sync().remove_device_config(&id).await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn test_sync_device(node_id: String, state: State<'_, AppState>) -> Result<bool, String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    Ok(node.sync().check_device_online(&node_id).await)
 }
 
 #[tauri::command]
@@ -923,6 +949,21 @@ async fn update_sync_settings(settings: k2_core::SyncSettings, state: State<'_, 
         guard.clone().ok_or("Node not initialized")?
     };
     node.sync().update_settings(settings).await.map_err(format_error)
+}
+
+#[tauri::command]
+async fn accept_sync_folder(
+    folder_id: String,
+    local_path: String,
+    state: tauri::State<'_, AppState>,
+) -> Result<(), String> {
+    let node = {
+        let guard = state.node.lock().unwrap();
+        guard.clone().ok_or("Node not initialized")?
+    };
+    node.sync().accept_folder_config(&folder_id, std::path::PathBuf::from(local_path))
+        .await
+        .map_err(format_error)
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -981,7 +1022,10 @@ pub fn run() {
             add_sync_device,
             remove_sync_device,
             get_sync_settings,
-            update_sync_settings
+            update_sync_settings,
+            sync_now,
+            test_sync_device,
+            accept_sync_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

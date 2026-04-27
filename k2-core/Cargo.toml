@@ -4,7 +4,7 @@ version = "0.2.0"
 edition = "2021"
 
 [dependencies]
-iroh = { version = "0.95.0", features = ["discovery-pkarr-dht"] }
+iroh = { version = "0.95.0", features = ["discovery-pkarr-dht", "discovery-local-network"] }
 iroh-base = "0.95"
 iroh-blobs = "0.97"
 iroh-gossip = "0.95.0"
@@ -26,6 +26,7 @@ directories = "5"
 aes-gcm = "0.10"
 base64 = "0.22"
 notify = "6.1"
+filetime = "0.2.27"
 
 
 

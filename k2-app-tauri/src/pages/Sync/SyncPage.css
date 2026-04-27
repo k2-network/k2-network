@@ -229,6 +229,30 @@
     background-color: rgba(255, 255, 255, 0.4);
 }
 
+.sync-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background-color: #45a366;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 500;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    z-index: 1000;
+    animation: fadein 0.3s, fadeout 0.3s 2.7s forwards;
+}
+
+@keyframes fadein {
+    from { opacity: 0; bottom: 0; }
+    to { opacity: 1; bottom: 24px; }
+}
+
+@keyframes fadeout {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
 /* Bridge */
 .sync-bridge-v2 {
     width: 280px;
@@ -718,4 +742,186 @@
         width: calc(100% - 40px);
         padding: 24px;
     }
+}
+/* Status Badges */
+.sync-status-badge {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    display: inline-block;
+    width: fit-content;
+    margin-top: 4px;
+}
+.sync-status-badge.idle { background-color: rgba(69, 163, 102, 0.1); color: #45a366; border: 1px solid rgba(69, 163, 102, 0.3); }
+.sync-status-badge.syncing { background-color: rgba(0, 136, 255, 0.1); color: #0088ff; border: 1px solid rgba(0, 136, 255, 0.3); animation: sync-pulse-blue 2s infinite; }
+.sync-status-badge.pending { background-color: rgba(255, 165, 0, 0.1); color: #ffa500; border: 1px solid rgba(255, 165, 0, 0.3); }
+.sync-status-badge.error { background-color: rgba(255, 68, 68, 0.1); color: #ff4444; border: 1px solid rgba(255, 68, 68, 0.3); }
+.sync-info-field.full-width { grid-column: span 4 !important; }
+@keyframes sync-pulse-blue {
+    0% { box-shadow: 0 0 0 0 rgba(0, 136, 255, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(0, 136, 255, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(0, 136, 255, 0); }
+}
+
+.sync-input-wrapper {
+    display: flex;
+    gap: 10px;
+    position: relative;
+    align-items: stretch;
+}
+.sync-test-btn {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid #333;
+    color: #888;
+    padding: 0 20px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    white-space: nowrap;
+}
+.sync-test-btn:hover:not(:disabled) {
+    background: rgba(0, 136, 255, 0.1);
+    border-color: #0088ff;
+    color: #0088ff;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 136, 255, 0.15);
+}
+.sync-test-btn.success { background: rgba(69, 163, 102, 0.15); border-color: #45a366; color: #45a366; }
+.sync-test-btn.fail { background: rgba(255, 68, 68, 0.15); border-color: #ff4444; color: #ff4444; }
+/* Pending Folder Styles */
+.sync-item-text-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.sync-item-sub {
+    font-size: 10px;
+    color: #666;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.sync-list-item.pending {
+    border: 1px dashed rgba(0, 136, 255, 0.4);
+    background: rgba(0, 136, 255, 0.05);
+}
+
+.sync-accept-badge {
+    background: linear-gradient(135deg, #0088ff, #0055ff);
+    color: white;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0, 136, 255, 0.3);
+}
+
+.devices-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    margin-top: 12px;
+}
+
+.device-toggle-card {
+    background-color: #111115;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.device-toggle-card:hover.editable {
+    border-color: #555;
+    background-color: #1a1a20;
+}
+
+.device-toggle-card.active {
+    border-color: #0088ff;
+    background-color: rgba(0, 136, 255, 0.05);
+}
+
+.device-avatar {
+    width: 36px;
+    height: 36px;
+    background: #2a2a30;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    color: #0088ff;
+    font-size: 14px;
+}
+
+.device-info-mini {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dev-name {
+    font-size: 13px;
+    font-weight: 600;
+    color: #e3e3e3;
+}
+
+.dev-type {
+    font-size: 10px;
+    color: #666;
+    text-transform: uppercase;
+}
+
+.dev-status-badge {
+    margin-top: 4px;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #0088ff22;
+    color: #0088ff;
+    width: fit-content;
+}
+
+.sync-targets-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.sync-accept-badge:hover {
+    transform: translateY(-1px) scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 136, 255, 0.5);
+    filter: brightness(1.1);
+}
+
+.sync-accept-badge:active {
+    transform: translateY(0) scale(0.95);
+}
+
+/* Status Dot Syncing Animation */
+.sync-item-status-dot.syncing {
+    background: #45a366;
+    box-shadow: 0 0 8px #45a366;
+    animation: sync-pulse-green 2s infinite;
+}
+
+@keyframes sync-pulse-green {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.2); opacity: 0.6; }
+    100% { transform: scale(1); opacity: 1; }
 }

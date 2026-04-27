@@ -18,7 +18,7 @@ use futures::{Stream, StreamExt};
 use serde::{de::DeserializeOwned, Serialize};
 
 /// K2DocsClient: "Bộ não" điều phối iroh-docs và iroh-blobs.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct K2DocsClient {
     docs: Docs,
     store: FsStore,
@@ -77,7 +77,7 @@ impl K2DocsClient {
 }
 
 /// K2DocHandle: Một lớp thông minh đại diện cho một tài liệu cụ thể.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct K2DocHandle {
     inner: Doc,
     author: AuthorId,
@@ -107,6 +107,13 @@ impl K2DocHandle {
             .map(|_| ())
             .map_err(|e| anyhow::anyhow!("Iroh set_bytes error: {:?}. Author: {:?}, Doc: {:?}", e, self.author, self.inner.id()))
             .context("Failed to set bytes")
+    }
+
+    /// THÔNG MINH: Chỉ lưu Hash vào Document (Dùng cho file lớn đã có trong Blob Store).
+    pub async fn set_hash(&self, key: impl Into<Vec<u8>>, hash: iroh_blobs::Hash, size: u64) -> Result<()> {
+        self.inner.set_hash(self.author, key.into(), hash, size).await
+            .map(|_| ())
+            .context("Failed to set hash in document")
     }
 
     /// THÔNG MINH: Tự động trích xuất dữ liệu thực tế từ Blob Store dựa trên Hash trong Entry.
@@ -206,7 +213,8 @@ impl K2DocHandle {
     /// Chia sẻ tài liệu qua DocTicket.
     pub async fn share(&self, mode: iroh_docs::api::protocol::ShareMode) -> Result<iroh_docs::DocTicket> {
         self.inner.share(mode, iroh_docs::api::protocol::AddrInfoOptions::Id)
-            .await.context("Failed to share document")
+            .await
+            .map_err(anyhow::Error::from)
     }
 
     /// Truy vấn linh hoạt bằng Query.
