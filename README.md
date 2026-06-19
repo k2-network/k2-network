@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="200" src="C:\Users\Admin\Pictures/k2.svg" alt="K2 Network Logo" />
+  <img width="200" src="k2-logo.svg" alt="K2 Network Logo" />
 </p>
 
 <h1 align="center">K2 Network</h1>
