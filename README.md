@@ -2,7 +2,6 @@
   <img width="200" src="k2-logo.png" alt="K2 Network Logo" />
 </p>
 
-<h1 align="center">K2 Network</h1>
 
 <p align="center">
   Decentralized P2P marketplace powered by AI agents
