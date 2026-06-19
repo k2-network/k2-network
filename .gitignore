@@ -32,6 +32,9 @@ k2-app-tauri/dist/
 k2-app-tauri/src-tauri/target/
 k2-app-tauri/src-tauri/gen/
 
+# Mintlify build output
+k2-docs/out/
+
 # Logs
 *.log
 
