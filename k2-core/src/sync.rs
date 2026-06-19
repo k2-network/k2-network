@@ -16,7 +16,8 @@ use serde::{Serialize, Deserialize};
 
 use crate::{K2DocsClient, K2DocHandle, K2Blob};
 use iroh::protocol::ProtocolHandler;
-use iroh_docs::{api::protocol::ShareMode, DocTicket, Capability};
+use iroh_base::EndpointAddr;
+use iroh_docs::{api::protocol::ShareMode, DocTicket};
 use filetime::FileTime;
 
 pub const SYNC_INVITE_ALPN: &[u8] = b"k2/sync-invite/1";
@@ -286,19 +287,18 @@ impl SyncManager {
         let ticket_str = String::from_utf8(ticket_bytes.to_vec())?;
         let ticket = ticket_str.parse::<DocTicket>()?;
         let doc_id = match &ticket.capability {
-            Capability::Read(id) => *id,
-            Capability::Write(id) => id.clone().into(),
+            iroh_docs::Capability::Read(id) => *id,
+            iroh_docs::Capability::Write(id) => id.clone().into(),
         };
 
-        // 1. Join the document
-        println!("[K2-Sync] 🔗 Joining shared document {}...", doc_id);
-        self.docs_client.import_doc(ticket.clone()).await?; // Need to clone or use reference if modifying
-        
-        // Extract the inviter nodes from the ticket
         let mut linked_devices = HashMap::new();
         for node_addr in &ticket.nodes {
             linked_devices.insert(node_addr.id.to_string(), "Accepted".to_string());
         }
+
+        // 1. Join the document
+        println!("[K2-Sync] 🔗 Joining shared document {}...", doc_id);
+        self.docs_client.import_doc(ticket).await?;
         
         // 2. Create the configuration
         let config = SyncFolderConfig {
@@ -506,7 +506,7 @@ impl SyncManager {
             }
             if status == "Accepted" {
                 if let Ok(node_id) = node_id_str.parse::<iroh_base::PublicKey>() {
-                    peer_addrs.push(iroh_base::EndpointAddr::from(node_id));
+                    peer_addrs.push(EndpointAddr::from(node_id));
                 }
             } else if status == "NotSent" {
                 println!("[K2-Sync] 📨 Device {} is 'NotSent', attempting invitation...", node_id_str);
@@ -528,7 +528,7 @@ impl SyncManager {
                         *status = "Accepted".to_string();
                         config_changed = true;
                         if let Ok(node_id) = node_id_str.parse::<iroh_base::PublicKey>() {
-                            peer_addrs.push(iroh_base::EndpointAddr::from(node_id));
+                            peer_addrs.push(EndpointAddr::from(node_id));
                         }
                     }
                     Ok(SyncStatusResponse::Pending) => {
@@ -801,7 +801,7 @@ impl SyncManager {
         // Attempt a ping-like connection with timeout
         let test = tokio::time::timeout(
             std::time::Duration::from_secs(10),
-            self.endpoint.connect(iroh_base::EndpointAddr::from(node_id), SYNC_INVITE_ALPN)
+            self.endpoint.connect(EndpointAddr::from(node_id), SYNC_INVITE_ALPN)
         ).await;
 
         let is_online = test.is_ok() && test.unwrap().is_ok();
@@ -853,7 +853,7 @@ impl SyncManager {
         
         let connection = tokio::time::timeout(
             std::time::Duration::from_secs(30),
-            self.endpoint.connect(iroh_base::EndpointAddr::from(target_public_key), SYNC_INVITE_ALPN)
+            self.endpoint.connect(EndpointAddr::from(target_public_key), SYNC_INVITE_ALPN)
         ).await.map_err(|_| anyhow::anyhow!("Connection timeout after 30s"))??;
         
         let (mut send_stream, mut recv_stream) = connection.open_bi().await?;
@@ -886,7 +886,7 @@ impl SyncManager {
         let target_public_key = target_node_id.parse::<iroh_base::PublicKey>()
             .map_err(|e| anyhow::anyhow!("Invalid node ID: {:?}", e))?;
             
-        let connection = self.endpoint.connect(iroh_base::EndpointAddr::from(target_public_key), SYNC_INVITE_ALPN).await?;
+        let connection = self.endpoint.connect(EndpointAddr::from(target_public_key), SYNC_INVITE_ALPN).await?;
         let (mut send_stream, mut recv_stream) = connection.open_bi().await?;
         
         let msg = SyncProtocolMessage::QueryStatus(folder_id.to_string());

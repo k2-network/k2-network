@@ -1,0 +1,149 @@
+---
+title: Introduction
+description: 'K2 Network is a decentralized P2P marketplace powered by AI agents'
+icon: 'rocket'
+---
+
+<img
+  className="mx-auto block dark:hidden"
+  src="https://github.com/user-attachments/assets/9a03018a-7ce5-40fc-893f-821e7cee64e5"
+  alt="K2 Network Logo"
+/>
+<img
+  className="mx-auto hidden dark:block"
+  src="https://github.com/user-attachments/assets/9a03018a-7ce5-40fc-893f-821e7cee64e5"
+  alt="K2 Network Logo"
+/>
+
+# K2 Network
+
+K2 Network is a **decentralized peer-to-peer marketplace** that connects buyers and sellers directly, without intermediaries. Powered by AI agents for intent classification and built on the Iroh P2P protocol, K2 enables secure, private, and censorship-resistant commerce across desktop and mobile platforms.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="AI-Powered Marketplace" icon="brain" iconType="duotone">
+    Intent classification via Tambo AI and Groq LLM APIs automatically matches buyer requests with relevant seller offerings.
+  </Card>
+  <Card title="P2P Communication" icon="comments" iconType="duotone">
+    Direct messaging between peers using the Iroh Gossip protocol. No central servers required.
+  </Card>
+  <Card title="Contact Management" icon="address-book" iconType="duotone">
+    P2P-synchronized contact book powered by iroh-docs. Your contacts follow you across devices.
+  </Card>
+  <Card title="File Sharing" icon="file-arrow-up" iconType="duotone">
+    Send and receive files directly via iroh-blobs with QR code sharing and ticket-based downloads.
+  </Card>
+  <Card title="Topic-Based Discovery" icon="hashtag" iconType="duotone">
+    Join topics to find relevant buyers and sellers. Tracker-based peer discovery ensures you connect to the right network.
+  </Card>
+  <Card title="Cross-Platform" icon="laptop-mobile" iconType="duotone">
+    Native applications for Windows, macOS, Linux, and Android built with Tauri 2.
+  </Card>
+  <Card title="Folder Sync" icon="rotate" iconType="duotone">
+    Syncthing-style folder synchronization powered by iroh-docs. Keep files in sync across all your devices.
+  </Card>
+  <Card title="Decentralized Identity" icon="fingerprint" iconType="duotone">
+    Cryptographic identity with OS secure store integration (Windows) and encrypted backup keys.
+  </Card>
+</CardGroup>
+
+## Tech Stack
+
+| Layer | Technologies | Version |
+|-------|-------------|---------|
+| Frontend | React, TypeScript, Tailwind CSS, shadcn/ui | React 19.2.3 |
+| Desktop / Mobile | Tauri 2, Rust | Tauri 2.x |
+| P2P Network | Iroh (gossip, blobs, docs) | iroh 1.0.0 |
+| AI | Tambo AI, Groq API | - |
+| Build Tool | Vite | 6.0.3 |
+
+### Workspace Structure
+
+```
+k2/
+├── k2-core/              # Rust P2P library (Iroh, gossip, blobs, docs)
+│   └── src/
+│       ├── lib.rs        # Main K2Node implementation
+│       ├── identity.rs   # Secret key management
+│       ├── docs.rs       # iroh-docs wrapper
+│       ├── blobs.rs      # iroh-blobs file sharing
+│       ├── profile.rs    # User profile storage
+│       └── sync.rs       # Folder synchronization
+│
+├── k2-app-tauri/         # Tauri 2 + React 19 frontend
+│   ├── src-tauri/
+│   │   └── src/
+│   │       └── lib.rs    # 36 Tauri commands
+│   ├── src/              # React frontend source
+│   └── package.json
+│
+└── k2-docs/              # This documentation site
+```
+
+## Quick Start
+
+### Prerequisites
+
+- **Rust** (latest stable) - Install via [rustup](https://rustup.rs/)
+- **Node.js** 18+ and npm
+- **Tauri CLI** - `cargo install tauri-cli`
+
+### Clone and Run
+
+<CodeGroup>
+
+```bash Desktop
+git clone https://github.com/k2-network/k2-network.git
+cd k2-app-tauri
+npm install
+npm run tauri dev
+```
+
+```bash Android
+npm run tauri android dev
+```
+
+</CodeGroup>
+
+### Configure Environment
+
+Create a `.env` file in `k2-app-tauri/`:
+
+```env
+VITE_GROQ_API_KEY=your_groq_api_key
+VITE_GROQ_BASE_URL=https://api.groq.com/openai/v1
+VITE_GROQ_SMALL_MODEL=llama-3.3-70b-versatile
+VITE_TAMBO_API_KEY=your_tambo_api_key
+```
+
+<Note>
+You will need API keys from [Groq](https://groq.com) and [Tambo AI](https://tambo.ai) for full marketplace functionality.
+</Note>
+
+## Architecture Overview
+
+K2 is built as a Rust workspace with two main crates:
+
+1. **`k2-core`** - The P2P networking library that wraps Iroh protocols (Endpoint, Gossip, Blobs, Docs) with high-level APIs for contacts, chat, file sharing, marketplace, and sync.
+
+2. **`k2-app-tauri`** - The cross-platform frontend application exposing 36 Tauri commands that bridge the React UI to the Rust P2P core.
+
+Read more about the system architecture in the [Architecture](/architecture) section.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/architecture">
+    Deep dive into K2's system design, data flows, and network topology.
+  </Card>
+  <Card title="Development" icon="code" href="/development">
+    Set up your development environment, run tests, and understand the build process.
+  </Card>
+  <Card title="CLI Commands" icon="terminal" href="/cli-commands">
+    Reference for all 36 Tauri commands organized by category.
+  </Card>
+  <Card title="Deployment" icon="rocket" href="/deployment">
+    Build Windows installers, Android APKs, and release processes.
+  </Card>
+</CardGroup>

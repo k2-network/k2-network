@@ -1,0 +1,293 @@
+---
+title: Development
+description: 'Development environment setup, build commands, and testing strategy'
+icon: 'code'
+---
+
+# Development
+
+This guide covers setting up your development environment, running the application, and testing changes.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+<AccordionGroup>
+  <Accordion title="Rust Toolchain">
+    Install Rust via [rustup](https://rustup.rs/):
+
+    ```bash
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    ```
+
+    K2 uses Rust 2021 edition. Ensure you have the latest stable toolchain:
+
+    ```bash
+    rustup update stable
+    rustc --version  # Should be 1.75+
+    ```
+  </Accordion>
+
+  <Accordion title="Node.js and npm">
+    Install Node.js 18+ and npm:
+
+    ```bash
+    node --version  # v18.0.0 or higher
+    npm --version
+    ```
+
+    We recommend using [nvm](https://github.com/nvm-sh/nvm) for Node.js version management.
+  </Accordion>
+
+  <Accordion title="Tauri CLI">
+    Install the Tauri CLI globally:
+
+    ```bash
+    cargo install tauri-cli
+    ```
+
+    Or use it via npx (already available as a devDependency):
+
+    ```bash
+    npx tauri --version
+    ```
+  </Accordion>
+
+  <Accordion title="Android Development (Optional)">
+    For Android builds, you need:
+
+    - Android Studio
+    - Android SDK
+    - Android NDK
+
+    Set environment variables:
+
+    ```env
+    ANDROID_HOME=C:\Users\<user>\AppData\Local\Android\Sdk
+    ANDROID_NDK_HOME=C:\Users\<user>\AppData\Local\Android\Sdk\ndk\<version>
+    ```
+
+    The project includes `.cargo/config.toml` with pre-configured NDK toolchains for:
+    - `armv7-linux-androideabi`
+    - `aarch64-linux-android`
+    - `x86_64-linux-android`
+    - `i686-linux-android`
+  </Accordion>
+</AccordionGroup>
+
+## Development Commands
+
+### Desktop Development
+
+Start the development server with hot reload:
+
+```bash
+cd k2-app-tauri
+npm install
+npm run tauri dev
+```
+
+This command:
+1. Starts the Vite development server
+2. Compiles the Tauri Rust backend
+3. Launches the desktop application window
+4. Enables hot reload for both frontend and backend changes
+
+### Android Development
+
+Run on an Android emulator or connected device:
+
+```bash
+cd k2-app-tauri
+npm run tauri android dev
+```
+
+This compiles the Rust code for Android targets and deploys to the connected device.
+
+### Core Library Testing
+
+Run unit tests for the Rust P2P core:
+
+```bash
+cd k2-core
+cargo test
+```
+
+For verbose output:
+
+```bash
+cargo test -- --nocapture
+```
+
+## Build Commands
+
+### Desktop Production Build
+
+Build an optimized production binary:
+
+```bash
+cd k2-app-tauri
+npm run tauri build
+```
+
+This creates:
+- **Windows**: `.msi` installer in `src-tauri/target/release/bundle/msi/`
+- **macOS**: `.app` bundle and `.dmg` in `src-tauri/target/release/bundle/dmg/`
+- **Linux**: `.deb` or `.AppImage` in `src-tauri/target/release/bundle/`
+
+### Android Production Build
+
+Build an APK or AAB:
+
+```bash
+npm run tauri android build
+```
+
+Output is located in `src-tauri/gen/android/app/build/outputs/`.
+
+### Workspace Build
+
+Build the entire Rust workspace (both k2-core and k2-app-tauri):
+
+```bash
+cargo build --workspace --release
+```
+
+## Testing Strategy
+
+### Unit Tests
+
+The `k2-core` crate includes unit tests in `src/lib_tests.rs`. Run them with:
+
+```bash
+cd k2-core
+cargo test
+```
+
+### Integration Testing
+
+For end-to-end testing of Tauri commands, you can use Tauri's built-in testing utilities:
+
+```bash
+cd k2-app-tauri/src-tauri
+cargo test --features test
+```
+
+### Manual Testing Checklist
+
+- [ ] Node initialization (`init_node`)
+- [ ] Profile creation and image upload
+- [ ] Adding and pinging contacts
+- [ ] Sending and receiving chat messages
+- [ ] Sharing and downloading files
+- [ ] Joining topics and broadcasting offers
+- [ ] AI intent classification
+- [ ] Folder sync setup and synchronization
+
+## Environment Configuration
+
+### Frontend Environment Variables
+
+Create a `.env` file in `k2-app-tauri/`:
+
+```env
+# Groq LLM API
+VITE_GROQ_API_KEY=your_groq_api_key
+VITE_GROQ_BASE_URL=https://api.groq.com/openai/v1
+VITE_GROQ_MODEL=openai/gpt-oss-120b
+VITE_GROQ_SMALL_MODEL=llama-3.3-70b-versatile
+
+# Tambo AI
+VITE_TAMBO_API_KEY=your_tambo_api_key
+```
+
+<Warning>
+Never commit API keys to version control. The `.env` file is included in `.gitignore` by default.
+</Warning>
+
+### Runtime Environment Variables
+
+The Rust backend respects these environment variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `K2_DATA_DIR` | Override the default data directory for isolated or guest mode |
+| `APPDATA` | Windows app data path (used for identity storage) |
+
+### Android Environment
+
+For Android development, set these in your shell or `.env` file at the project root:
+
+```env
+ANDROID_HOME=C:\Users\<user>\AppData\Local\Android\Sdk
+ANDROID_NDK_HOME=C:\Users\<user>\AppData\Local\Android\Sdk\ndk\29.0.14206865
+```
+
+## Project Scripts
+
+### package.json Scripts
+
+| Script | Command | Description |
+|--------|---------|-------------|
+| `dev` | `vite` | Start Vite dev server (frontend only) |
+| `build` | `tsc && vite build` | Build production frontend assets |
+| `preview` | `vite preview` | Preview production build |
+| `tauri` | `tauri` | Tauri CLI proxy |
+
+### Cargo Features
+
+The `k2-core` crate supports optional features:
+
+| Feature | Description | Default |
+|---------|-------------|---------|
+| `content-discovery` | Enable iroh-content-discovery for tracker-based peer finding | Enabled |
+| `credential-store` | Enable OS secure store via Amulet (Windows only) | Enabled |
+
+Build without optional features:
+
+```bash
+cargo build --no-default-features
+```
+
+Build with specific features:
+
+```bash
+cargo build --features content-discovery
+```
+
+## Debugging
+
+### Enable Rust Logging
+
+Set the `RUST_LOG` environment variable before running:
+
+```bash
+$env:RUST_LOG="debug"
+npm run tauri dev
+```
+
+### Frontend Debugging
+
+The Tauri window includes Chrome DevTools. Right-click and select "Inspect" or press `Ctrl+Shift+I` (Windows/Linux) or `Cmd+Option+I` (macOS).
+
+### Common Issues
+
+<AccordionGroup>
+  <Accordion title="Android NDK not found">
+    Ensure `ANDROID_NDK_HOME` is set correctly and the NDK version matches `.cargo/config.toml`.
+  </Accordion>
+
+  <Accordion title="Port already in use">
+    Vite dev server defaults to port 5173. If occupied, it will auto-increment. Check the console output for the actual port.
+  </Accordion>
+
+  <Accordion title="Rust compilation errors">
+    Run `cargo clean` in both `k2-core/` and `k2-app-tauri/src-tauri/`, then rebuild.
+  </Accordion>
+</AccordionGroup>
+
+## Code Style
+
+- **Rust**: Follow standard Rust formatting (`cargo fmt`) and linting (`cargo clippy`)
+- **TypeScript/JavaScript**: The project uses standard Vite/React conventions
+- **Commits**: Use conventional commits for changelog generation

@@ -722,7 +722,9 @@ async fn listen_offers(topic: String, timeout_secs: u64, state: State<'_, AppSta
                     Event::NeighborDown(id) => {
                         println!("[K2] 🔴 Peer disconnected: {}...", &id.to_string()[..8]);
                     }
-                    _ => {}
+                    Event::Lagged => {
+                        println!("[K2] ⚠️ Lagged: missed some messages (receiver too slow)");
+                    }
                 }
             }
             Ok(Some(Err(e))) => {
@@ -830,8 +832,8 @@ async fn start_listening(topic: String, app_handle: tauri::AppHandle, state: Sta
                             println!("[K2] 🔴 Peer disconnected: {}", id.to_string());
                             let _ = app_handle.emit("k2://peer-disconnected", id.to_string());
                         }
-                        other => {
-                            println!("[K2] 📭 Other event: {:?}", other);
+                        Event::Lagged => {
+                            println!("[K2] ⚠️ Lagged: missed some messages (receiver too slow)");
                         }
                     }
                 }

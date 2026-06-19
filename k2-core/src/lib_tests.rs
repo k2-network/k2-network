@@ -112,7 +112,7 @@ async fn test_marketplace_message_integrity() -> Result<()> {
 
 #[tokio::test]
 async fn benchmark_multi_node_marketplace_flow() -> Result<()> {
-    let topic_name = format!("market-bench-{}", iroh::SecretKey::generate(&mut rand::rng()).public());
+    let topic_name = format!("market-bench-{}", iroh::SecretKey::generate().public());
     let topic_id = K2Marketplace::topic_to_id(&topic_name);
     
     println!("\n=== ĐO LƯỜNG CHU TRÌNH MARKETPLACE (3 NODES) ===");

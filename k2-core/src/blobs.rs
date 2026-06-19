@@ -1,4 +1,4 @@
-//! K2 Blob - Intelligent wrapper for iroh-blobs (v0.97)
+//! K2 Blob - Intelligent wrapper for iroh-blobs (v0.103)
 //!
 //! Provides a simplified interface for adding, retrieving, sharing, and downloading blobs.
 
@@ -71,9 +71,9 @@ impl K2Blob {
 
     /// Create a ticket for sharing a blob
     pub async fn create_ticket(&self, hash: Hash) -> Result<String> {
-        // Use iroh 0.95 endpoint addr API
+        // Use iroh 1.0.0 endpoint addr API
         let addr = self.endpoint.addr();
-        // BlobTicket::new in 0.97 does NOT return a Result
+        // BlobTicket::new returns the ticket directly (no Result)
         let ticket = BlobTicket::new(addr, hash, BlobFormat::Raw);
         Ok(ticket.to_string())
     }
@@ -82,10 +82,10 @@ impl K2Blob {
     pub async fn download(&self, ticket_str: &str) -> Result<Hash> {
         let ticket = BlobTicket::from_str(ticket_str).context("Invalid ticket")?;
         
-        // Use downloader from store (iroh-blobs 0.97)
+        // Use downloader from store (iroh-blobs 0.103)
         let downloader = self.store.downloader(&self.endpoint);
         
-        // Start download with peer list (iroh-blobs 0.97 API)
+        // Start download with peer list (iroh-blobs 0.103: ContentDiscovery trait)
         downloader.download(ticket.hash(), vec![ticket.addr().id])
             .await
             .context("Download failed")?;

@@ -111,8 +111,8 @@ export function SyncPage() {
         try {
             // Clean up any "undefined" keys that might have leaked into the state
             const cleanedLinkedDevices = { ...folder.linkedDevices };
-            if ("undefined" in cleanedLinkedDevices) delete cleanedLinkedDevices["undefined"];
-            if (undefined in cleanedLinkedDevices) delete cleanedLinkedDevices[undefined as any];
+            delete (cleanedLinkedDevices as Record<string, any>)["undefined"];
+            delete (cleanedLinkedDevices as Record<string, any>)[undefined as any];
             
             const cleanedFolder = { ...folder, linkedDevices: cleanedLinkedDevices };
             await invoke('add_sync_folder', { config: cleanedFolder });

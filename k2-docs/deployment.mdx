@@ -1,0 +1,239 @@
+---
+title: Deployment
+description: 'Building installers, Android APKs, and release processes'
+icon: 'rocket'
+---
+
+# Deployment
+
+This guide covers building production releases of K2 Network for desktop and mobile platforms.
+
+## Windows Installer Build
+
+### Prerequisites
+
+- Windows 10/11
+- Rust stable toolchain
+- Node.js 18+
+- WiX Toolset v3 (for MSI generation) - Tauri will prompt to install if missing
+
+### Build Steps
+
+1. **Configure environment variables:**
+
+   Ensure your `.env` file in `k2-app-tauri/` contains production API keys:
+
+   ```env
+   VITE_GROQ_API_KEY=production_groq_key
+   VITE_GROQ_BASE_URL=https://api.groq.com/openai/v1
+   VITE_GROQ_SMALL_MODEL=llama-3.3-70b-versatile
+   VITE_TAMBO_API_KEY=production_tambo_key
+   ```
+
+2. **Build the installer:**
+
+   ```bash
+   cd k2-app-tauri
+   npm install
+   npm run tauri build
+   ```
+
+3. **Locate outputs:**
+
+   | Artifact | Path |
+   |----------|------|
+   | MSI Installer | `src-tauri/target/release/bundle/msi/*.msi` |
+   | NSIS Installer | `src-tauri/target/release/bundle/nsis/*.exe` |
+   | Portable Binary | `src-tauri/target/release/k2-app-tauri.exe` |
+
+### Code Signing (Recommended)
+
+For production distribution, sign your Windows installer:
+
+```bash
+# Using signtool (Windows SDK)
+signtool sign /f certificate.pfx /p password /tr http://timestamp.digicert.com /td sha256 /fd sha256 "K2 Network_0.1.0_x64_en-US.msi"
+```
+
+<Note>
+Unsigned Windows installers will show SmartScreen warnings. Consider purchasing a code signing certificate from a trusted CA.
+</Note>
+
+## Android Build
+
+### Prerequisites
+
+- Android Studio
+- Android SDK (API 24+)
+- Android NDK r25b or newer
+- Java 17
+
+### Environment Setup
+
+Ensure these environment variables are set (typically in `.env` at project root):
+
+```env
+ANDROID_HOME=C:\Users\<user>\AppData\Local\Android\Sdk
+ANDROID_NDK_HOME=C:\Users\<user>\AppData\Local\Android\Sdk\ndk\29.0.14206865
+```
+
+The project includes `.cargo/config.toml` with pre-configured NDK toolchains for:
+- `armv7-linux-androideabi`
+- `aarch64-linux-android`
+- `x86_64-linux-android`
+- `i686-linux-android`
+
+### Build Steps
+
+1. **Install dependencies:**
+
+   ```bash
+   cd k2-app-tauri
+   npm install
+   ```
+
+2. **Build debug APK:**
+
+   ```bash
+   npm run tauri android build -- --debug
+   ```
+
+3. **Build release APK:**
+
+   ```bash
+   npm run tauri android build
+   ```
+
+4. **Locate outputs:**
+
+   | Artifact | Path |
+   |----------|------|
+   | Debug APK | `src-tauri/gen/android/app/build/outputs/apk/debug/` |
+   | Release APK | `src-tauri/gen/android/app/build/outputs/apk/release/` |
+   | Release AAB | `src-tauri/gen/android/app/build/outputs/bundle/release/` |
+
+### APK Signing
+
+Android requires APK signing for installation on physical devices:
+
+```bash
+# Generate keystore (one-time)
+keytool -genkey -v -keystore k2-release.keystore -alias k2 -keyalg RSA -keysize 2048 -validity 10000
+
+# Sign APK
+jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore k2-release.keystore app-release-unsigned.apk k2
+
+# Align APK
+zipalign -v 4 app-release-unsigned.apk K2-Network-v0.1.0.apk
+```
+
+## Release Process
+
+### Version Management
+
+K2 uses semantic versioning. Update version numbers in:
+
+1. `k2-app-tauri/package.json` - `"version": "0.1.0"`
+2. `k2-app-tauri/src-tauri/Cargo.toml` - `version = "0.1.0"`
+3. `k2-core/Cargo.toml` - `version = "0.2.0"`
+
+### Release Checklist
+
+- [ ] Update version numbers across all manifests
+- [ ] Update `CHANGELOG.md` with release notes
+- [ ] Ensure all tests pass: `cargo test --workspace`
+- [ ] Build Windows installer: `npm run tauri build`
+- [ ] Build Android APK: `npm run tauri android build`
+- [ ] Test installer on clean Windows VM
+- [ ] Test APK on physical Android device
+- [ ] Sign all artifacts
+- [ ] Create GitHub Release with artifacts attached
+- [ ] Update download links in documentation
+
+### Automated Releases (Future)
+
+While K2 currently does not have CI/CD configured, we recommend setting up GitHub Actions:
+
+```yaml
+# .github/workflows/release.yml (recommended)
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: dtolnay/rust-action@stable
+      - run: cd k2-app-tauri && npm install && npm run tauri build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: k2-app-tauri/src-tauri/target/release/bundle/msi/*.msi
+```
+
+## Environment Variables for Production
+
+### Required Variables
+
+| Variable | Purpose | Example |
+|----------|---------|---------|
+| `VITE_GROQ_API_KEY` | Groq LLM API authentication | `gsk_...` |
+| `VITE_GROQ_BASE_URL` | Groq API endpoint | `https://api.groq.com/openai/v1` |
+| `VITE_GROQ_SMALL_MODEL` | Fast model for simple tasks | `llama-3.3-70b-versatile` |
+| `VITE_TAMBO_API_KEY` | Tambo AI intent service | `tambo_...` |
+
+### Optional Variables
+
+| Variable | Purpose | Default |
+|----------|---------|---------|
+| `VITE_GROQ_MODEL` | Primary LLM model | `openai/gpt-oss-120b` |
+| `K2_DATA_DIR` | Custom data directory | OS app data path |
+| `RUST_LOG` | Rust logging level | `error` |
+
+### Security Best Practices
+
+<Warning>
+**API Key Management**
+- Never commit API keys to version control
+- Use environment-specific `.env` files
+- Rotate keys regularly
+- Consider proxying LLM calls through your own backend for production
+</Warning>
+
+<Warning>
+**Android Keystore**
+- Keep `k2-release.keystore` in a secure location (password manager)
+- Backup the keystore - losing it prevents app updates
+- Use different keystores for debug and release builds
+</Warning>
+
+## Platform-Specific Notes
+
+### Windows
+
+- Minimum: Windows 10 (1903+)
+- WebView2 runtime is required (bundled with installer)
+- Supports both x64 and ARM64 (future)
+
+### macOS
+
+- Minimum: macOS 11 (Big Sur)
+- Notarized builds recommended for distribution
+- Universal binaries (Intel + Apple Silicon) supported by Tauri
+
+### Linux
+
+- Supports Debian/Ubuntu (`.deb`), Fedora (`.rpm`), and AppImage
+- WebKit2GTK dependency required
+
+### Android
+
+- Minimum API 24 (Android 7.0)
+- Permissions required: Internet, Storage, Camera (QR scanning)
+- Adaptive icons recommended

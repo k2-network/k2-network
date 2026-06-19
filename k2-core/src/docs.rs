@@ -1,4 +1,4 @@
-//! K2 Docs - Lớp thông minh đơn giản hóa việc sử dụng iroh-docs (v0.95)
+//! K2 Docs - Lớp thông minh đơn giản hóa việc sử dụng iroh-docs (v0.101)
 //!
 //! Thay vì quản lý thủ công từng bản ghi và hash, K2DocsClient tự động điều phối
 //! giữa iroh-docs (siêu dữ liệu) và iroh-blobs (dữ liệu thực tế), 

@@ -1,0 +1,61 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "willow",
+  "name": "K2 Network Documentation",
+  "logo": {
+    "dark": "/logo.svg",
+    "light": "/logo.svg"
+  },
+  "colors": {
+    "primary": "#0ea5e9",
+    "light": "#38bdf8",
+    "dark": "#0284c7"
+  },
+  "favicon": "/logo.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": ["introduction"]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": ["architecture"]
+          },
+          {
+            "group": "Development",
+            "pages": ["development", "cli-commands"]
+          },
+          {
+            "group": "Deployment",
+            "pages": ["deployment"]
+          }
+        ]
+      },
+      {
+        "tab": "Migration",
+        "groups": [
+          {
+            "group": "Migration Guide",
+            "pages": ["migration-iroh-1.0"]
+          }
+        ]
+      }
+    ]
+  },
+  "anchors": [
+    {
+      "name": "GitHub",
+      "icon": "github",
+      "url": "https://github.com/k2-network/k2-network"
+    }
+  ],
+  "footer": {
+    "socials": {
+      "github": "https://github.com/k2-network/k2-network"
+    }
+  }
+}

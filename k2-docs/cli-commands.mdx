@@ -1,0 +1,702 @@
+---
+title: CLI Commands
+description: 'Complete reference for all 36 Tauri commands in K2 Network'
+icon: 'terminal'
+---
+
+# CLI Commands
+
+K2 exposes **36 Tauri commands** that bridge the React frontend to the Rust P2P core. These commands are organized into logical groups based on their functionality.
+
+<Note>
+All commands are defined in `k2-app-tauri/src-tauri/src/lib.rs` and invoked from the frontend via `@tauri-apps/api`.
+</Note>
+
+## Node Management
+
+Commands for initializing and managing the local P2P node.
+
+### `init_node`
+
+Initialize the K2Node with persistent storage. This command is idempotent - if a node already exists, it returns the existing node ID.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `app` | `AppHandle` | Tauri application handle (injected by runtime) |
+
+**Returns:** `String` - Short node ID (first 8 characters of the public key)
+
+**Example:**
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+const nodeId = await invoke('init_node');
+console.log('Node initialized:', nodeId);
+```
+
+---
+
+### `get_my_node_id`
+
+Retrieve the full node public key as a hex string for sharing with other peers.
+
+**Parameters:** None
+
+**Returns:** `String` - Full NodeId in hexadecimal format
+
+**Example:**
+```typescript
+const fullNodeId = await invoke('get_my_node_id');
+// e.g., "71853750efc1219d7976639087c5fb25cf8d4b49f6d509366f2e094a3f781623"
+```
+
+## Profile Management
+
+Commands for managing the user's public profile.
+
+### `get_profile`
+
+Retrieve the current user's profile information.
+
+**Returns:** `Profile` object containing:
+- `name`: Display name
+- `intro`: Short introduction
+- `description`: Detailed description
+- `avatar_hash`: BLAKE3 hash of avatar image
+- `logo_dark_hash`: Hash of dark mode logo
+- `logo_light_hash`: Hash of light mode logo
+
+**Example:**
+```typescript
+const profile = await invoke('get_profile');
+console.log(profile.name);
+```
+
+---
+
+### `get_profile_image`
+
+Fetch a profile image by its BLAKE3 hash.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `hash` | `String` | BLAKE3 hash of the image |
+
+**Returns:** `String` - Base64-encoded PNG data URL
+
+**Example:**
+```typescript
+const imageDataUrl = await invoke('get_profile_image', { hash: profile.avatar_hash });
+// "data:image/png;base64,iVBORw0KGgo..."
+```
+
+---
+
+### `update_profile_text`
+
+Update the text fields of the user profile. Supports partial updates.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `name` | `String` | No | New display name |
+| `intro` | `String` | No | New short introduction |
+| `description` | `String` | No | New detailed description |
+
+**Returns:** `()` - Success indicator
+
+**Example:**
+```typescript
+await invoke('update_profile_text', {
+  name: 'Alice',
+  intro: 'Software engineer & seller'
+});
+```
+
+---
+
+### `update_profile_image`
+
+Upload and store a profile image (avatar or logo).
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `field` | `String` | One of: `"avatar"`, `"logo_dark"`, `"logo_light"` |
+| `bytes` | `Vec<u8>` | Raw image bytes (PNG or JPEG) |
+
+**Returns:** `String` - BLAKE3 hash of the stored image
+
+**Example:**
+```typescript
+const imageBytes = await fetch(file).then(r => r.arrayBuffer());
+const hash = await invoke('update_profile_image', {
+  field: 'avatar',
+  bytes: Array.from(new Uint8Array(imageBytes))
+});
+```
+
+## Contact Book
+
+Commands for managing P2P contacts via iroh-docs synchronization.
+
+### `add_contact`
+
+Add a new contact to the synchronized contact book.
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `node_id` | `String` | Yes | Full NodeId in hex format |
+| `nickname` | `String` | Yes | Display name for the contact |
+| `notes` | `String` | No | Optional notes |
+
+**Returns:** `()` - Success indicator
+
+**Example:**
+```typescript
+await invoke('add_contact', {
+  node_id: '71853750efc1219d...',
+  nickname: 'Bob',
+  notes: 'Laptop seller from #laptops topic'
+});
+```
+
+---
+
+### `remove_contact`
+
+Remove a contact by their NodeId.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `node_id` | `String` | Full NodeId in hex format |
+
+**Example:**
+```typescript
+await invoke('remove_contact', { node_id: '71853750efc1219d...' });
+```
+
+---
+
+### `update_contact_nickname`
+
+Update a contact's nickname.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `node_id` | `String` | Full NodeId in hex format |
+| `nickname` | `String` | New nickname |
+
+**Example:**
+```typescript
+await invoke('update_contact_nickname', {
+  node_id: '71853750efc1219d...',
+  nickname: 'Bob the Builder'
+});
+```
+
+---
+
+### `list_contacts`
+
+List all contacts from the iroh-docs contact book.
+
+**Returns:** `Vec<Contact>` - Array of contact objects
+
+**Example:**
+```typescript
+const contacts = await invoke('list_contacts');
+contacts.forEach(c => console.log(c.nickname, c.node_id));
+```
+
+---
+
+### `ping_contact`
+
+Check if a contact is online with a 10-second timeout.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `node_id` | `String` | Full NodeId in hex format |
+
+**Returns:** `bool` - `true` if contact responds within timeout
+
+**Example:**
+```typescript
+const isOnline = await invoke('ping_contact', { node_id: '71853750efc1219d...' });
+console.log('Contact is', isOnline ? 'online' : 'offline');
+```
+
+## Chat / Direct Messages
+
+Commands for P2P direct messaging via iroh-gossip.
+
+### `send_chat_message`
+
+Send a direct message to a contact via a gossip topic derived from both NodeIds.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `recipient_node_id` | `String` | Full NodeId of the recipient |
+| `content` | `String` | Message text |
+
+**Returns:** `()` - Success indicator
+
+**Example:**
+```typescript
+await invoke('send_chat_message', {
+  recipient_node_id: '71853750efc1219d...',
+  content: 'Hey, is the laptop still available?'
+});
+```
+
+---
+
+### `start_dm_listener`
+
+Subscribe to direct message topics for a contact and emit frontend events when messages arrive.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `contact_node_id` | `String` | Full NodeId of the contact to listen for |
+
+**Events Emitted:**
+- `k2://chat-message` - `{ sender, content, timestamp }`
+
+**Example:**
+```typescript
+import { listen } from '@tauri-apps/api/event';
+
+// Start listening
+await invoke('start_dm_listener', { contact_node_id: '71853750efc1219d...' });
+
+// Handle incoming messages
+listen('k2://chat-message', (event) => {
+  console.log('New message:', event.payload);
+});
+```
+
+## File Sharing
+
+Commands for sharing and downloading files via iroh-blobs.
+
+### `share_file`
+
+Add a file to the blob store and generate a shareable ticket.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `path` | `String` | Absolute file path |
+
+**Returns:** `String` - Ticket in format `filename|ticket_string`
+
+**Example:**
+```typescript
+const ticket = await invoke('share_file', { path: '/home/user/photo.jpg' });
+// "photo.jpg|blobticket..."
+```
+
+---
+
+### `share_bytes`
+
+Share raw bytes directly (useful for Android content:// URIs).
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `bytes` | `Vec<u8>` | Raw file bytes |
+| `filename` | `String` | Original filename |
+
+**Returns:** `String` - Ticket string
+
+**Example:**
+```typescript
+const ticket = await invoke('share_bytes', {
+  bytes: Array.from(imageBytes),
+  filename: 'screenshot.png'
+});
+```
+
+---
+
+### `download_file`
+
+Download a file from a blob ticket and save it to the Downloads folder.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `ticket` | `String` | Full blob ticket string |
+
+**Returns:** `String` - Full path to the downloaded file
+
+**Example:**
+```typescript
+const savePath = await invoke('download_file', { ticket: 'blobticket...' });
+console.log('File saved to:', savePath);
+```
+
+---
+
+### `generate_qr_svg`
+
+Generate a QR code as an SVG string for sharing tickets or NodeIds.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `data` | `String` | Data to encode in the QR code |
+
+**Returns:** `String` - SVG XML string
+
+**Example:**
+```typescript
+const svg = await invoke('generate_qr_svg', { data: ticket });
+// Insert into DOM: <div dangerouslySetInnerHTML={{ __html: svg }} />
+```
+
+## Marketplace
+
+Commands for the AI-powered decentralized marketplace.
+
+### `get_broadcast_delay`
+
+Get a random delay between 1-4 seconds for gossip message randomization.
+
+**Returns:** `u64` - Delay in seconds
+
+**Example:**
+```typescript
+const delay = await invoke('get_broadcast_delay');
+await new Promise(r => setTimeout(r, delay * 1000));
+```
+
+---
+
+### `join_topic`
+
+Subscribe to a marketplace topic with tracker-based peer discovery.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `topic` | `String` | Topic name (e.g., "laptops", "services") |
+| `action` | `String` | User action: "buying" or "selling" |
+
+**Returns:** `()` - Success indicator
+
+**Example:**
+```typescript
+await invoke('join_topic', { topic: 'laptops', action: 'buying' });
+```
+
+---
+
+### `classify_intent`
+
+Classify user intent using the Groq API (backend proxy to avoid CORS).
+
+**Parameters:**
+| Name | Type | Required | Description |
+|------|------|----------|-------------|
+| `user_prompt` | `String` | Yes | Natural language query |
+| `api_key` | `String` | Yes | Groq API key |
+| `base_url` | `String` | No | Custom base URL (defaults to Groq) |
+| `model` | `String` | No | Model name (defaults to config) |
+
+**Returns:** `JsonValue` - Structured intent JSON
+
+**Example:**
+```typescript
+const intent = await invoke('classify_intent', {
+  user_prompt: 'I want to buy a gaming laptop under $1000',
+  api_key: import.meta.env.VITE_GROQ_API_KEY
+});
+// { topic: "laptops", action: "buying", filters: { price_max: 1000, category: "gaming" } }
+```
+
+---
+
+### `classify_k2_endpoint`
+
+Alternative intent classification via a K2 backend endpoint.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `user_prompt` | `String` | Natural language query |
+
+**Returns:** `JsonValue` - Structured intent JSON
+
+---
+
+### `broadcast_offer`
+
+Broadcast an offer or request to a topic.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `topic` | `String` | Topic name |
+| `form_data` | `JsonValue` | Offer/request data |
+
+**Returns:** `()` - Success indicator
+
+**Example:**
+```typescript
+await invoke('broadcast_offer', {
+  topic: 'laptops',
+  form_data: {
+    title: 'Gaming Laptop',
+    price: 950,
+    currency: 'USD',
+    description: 'RTX 4060, 16GB RAM'
+  }
+});
+```
+
+---
+
+### `send_interest`
+
+Send an interest message to a specific seller.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `topic` | `String` | Topic name |
+| `seller_node_id` | `String` | Seller's NodeId |
+| `form_data` | `JsonValue` | Interest details |
+
+**Returns:** `()` - Success indicator
+
+---
+
+### `listen_offers`
+
+Blocking poll for offers on a topic (returns after timeout or when offers are found).
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `topic` | `String` | Topic name |
+| `timeout_secs` | `u64` | Maximum wait time |
+
+**Returns:** `Vec<Offer>` - Array of received offers
+
+**Example:**
+```typescript
+const offers = await invoke('listen_offers', { topic: 'laptops', timeout_secs: 30 });
+```
+
+---
+
+### `start_listening`
+
+Start a real-time listener for marketplace events on a topic.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `topic` | `String` | Topic name |
+
+**Events Emitted:**
+- `k2://offer-received` - New offer broadcast
+- `k2://peer-connected` - Peer joined the topic
+- `k2://peer-disconnected` - Peer left the topic
+
+**Example:**
+```typescript
+await invoke('start_listening', { topic: 'laptops' });
+
+listen('k2://offer-received', (event) => {
+  console.log('New offer:', event.payload);
+});
+```
+
+## Sync
+
+Commands for Syncthing-style folder synchronization via iroh-docs.
+
+### `get_sync_folders`
+
+List all configured sync folders with their status.
+
+**Returns:** `Vec<SyncFolder>` - Array of folder configurations
+
+**Example:**
+```typescript
+const folders = await invoke('get_sync_folders');
+```
+
+---
+
+### `add_sync_folder`
+
+Add a new folder to synchronize.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `config` | `SyncFolderConfig` | Folder configuration object |
+
+**Returns:** `String` - Generated folder ID
+
+**Example:**
+```typescript
+const folderId = await invoke('add_sync_folder', {
+  config: {
+    local_path: '/home/user/Documents',
+    label: 'Documents'
+  }
+});
+```
+
+---
+
+### `remove_sync_folder`
+
+Remove a sync folder (soft delete with tombstone).
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | `String` | Folder ID |
+
+---
+
+### `get_sync_devices`
+
+List all paired sync devices with online status.
+
+**Returns:** `Vec<SyncDevice>` - Array of device information
+
+---
+
+### `add_sync_device`
+
+Add a device to the sync network.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `config` | `SyncDeviceConfig` | Device configuration |
+
+---
+
+### `remove_sync_device`
+
+Remove a device from the sync network.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | `String` | Device ID |
+
+---
+
+### `test_sync_device`
+
+Check if a sync device is online (10-second timeout).
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `node_id` | `String` | Device NodeId |
+
+**Returns:** `bool` - Online status
+
+---
+
+### `get_sync_settings`
+
+Get global sync settings.
+
+**Returns:** `SyncSettings` - Current settings object
+
+---
+
+### `update_sync_settings`
+
+Update global sync settings.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `settings` | `SyncSettings` | New settings object |
+
+---
+
+### `sync_now`
+
+Trigger an immediate sync for a specific folder.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `id` | `String` | Folder ID |
+
+---
+
+### `accept_sync_folder`
+
+Accept an incoming folder sync invitation.
+
+**Parameters:**
+| Name | Type | Description |
+|------|------|-------------|
+| `folder_id` | `String` | Folder ID from invitation |
+| `local_path` | `String` | Local path to sync to |
+
+**Returns:** `()` - Success indicator
+
+## Command Summary Table
+
+| Command | Category | Description |
+|---------|----------|-------------|
+| `init_node` | Node | Initialize P2P node |
+| `get_my_node_id` | Node | Get full NodeId |
+| `get_profile` | Profile | Retrieve user profile |
+| `get_profile_image` | Profile | Get profile image by hash |
+| `update_profile_text` | Profile | Update profile text fields |
+| `update_profile_image` | Profile | Upload profile image |
+| `add_contact` | Contacts | Add contact to address book |
+| `remove_contact` | Contacts | Remove contact |
+| `update_contact_nickname` | Contacts | Update contact nickname |
+| `list_contacts` | Contacts | List all contacts |
+| `ping_contact` | Contacts | Check contact online status |
+| `send_chat_message` | Chat | Send direct message |
+| `start_dm_listener` | Chat | Start DM event listener |
+| `share_file` | Files | Share file by path |
+| `share_bytes` | Files | Share raw bytes |
+| `download_file` | Files | Download from ticket |
+| `generate_qr_svg` | Files | Generate QR code SVG |
+| `get_broadcast_delay` | Marketplace | Get random gossip delay |
+| `join_topic` | Marketplace | Subscribe to topic |
+| `classify_intent` | Marketplace | AI intent classification |
+| `classify_k2_endpoint` | Marketplace | K2 backend classification |
+| `broadcast_offer` | Marketplace | Broadcast offer to topic |
+| `send_interest` | Marketplace | Send interest to seller |
+| `listen_offers` | Marketplace | Poll for offers |
+| `start_listening` | Marketplace | Start real-time listener |
+| `get_sync_folders` | Sync | List sync folders |
+| `add_sync_folder` | Sync | Add sync folder |
+| `remove_sync_folder` | Sync | Remove sync folder |
+| `get_sync_devices` | Sync | List paired devices |
+| `add_sync_device` | Sync | Add sync device |
+| `remove_sync_device` | Sync | Remove sync device |
+| `test_sync_device` | Sync | Test device connectivity |
+| `get_sync_settings` | Sync | Get sync settings |
+| `update_sync_settings` | Sync | Update sync settings |
+| `sync_now` | Sync | Trigger immediate sync |
+| `accept_sync_folder` | Sync | Accept folder invitation |

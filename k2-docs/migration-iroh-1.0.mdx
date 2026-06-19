@@ -1,0 +1,277 @@
+---
+title: 'Iroh 0.95 to 1.0.0 Migration'
+description: 'Documenting the migration from iroh 0.95 to iroh 1.0.0'
+icon: 'arrow-up-right-dots'
+---
+
+# Iroh 0.95 to 1.0.0 Migration
+
+This document tracks the migration from iroh 0.95 to iroh 1.0.0. While the project's `Cargo.toml` specifies iroh 1.0.0, source code comments and some API patterns still reference the 0.95 era. This migration guide ensures a complete and correct upgrade.
+
+## Version Status
+
+| Crate | Current `Cargo.toml` | Source Comments | Status |
+|-------|---------------------|-----------------|--------|
+| `iroh` | 1.0.0 | References 0.95 | Migrated |
+| `iroh-base` | 1.0.0 | - | Migrated |
+| `iroh-blobs` | 0.103 | References 0.97 | Migrated |
+| `iroh-gossip` | 0.101 | - | Migrated |
+| `iroh-docs` | 0.101 | References 0.95 | Migrated |
+| `iroh-mainline-address-lookup` | 0.1 | New in 1.0.0 | Added |
+| `iroh-mdns-address-lookup` | 0.1 | New in 1.0.0 | Added |
+
+<Warning>
+iroh 1.0.0 extracted several modules into separate crates. Ensure all sub-crates are updated together to avoid version mismatches.
+</Warning>
+
+## Breaking Changes
+
+### 1. Crate Restructuring
+
+In iroh 1.0.0, several components were extracted from the main `iroh` crate into standalone crates:
+
+| Old (0.95) | New (1.0.0) |
+|------------|-------------|
+| `iroh::dht` | `iroh-mainline-address-lookup` |
+| `iroh::mdns` | `iroh-mdns-address-lookup` |
+| `iroh::net::Endpoint` | `iroh::Endpoint` |
+
+**Migration:**
+
+```rust
+// Old (0.95)
+use iroh::dht::DhtDiscovery;
+
+// New (1.0.0)
+use iroh_mainline_address_lookup::DhtDiscovery;
+```
+
+### 2. Endpoint Builder API
+
+The Endpoint builder API changed slightly:
+
+```rust
+// Old (0.95) - may have used different method names
+let endpoint = Endpoint::builder()
+    .secret_key(secret_key)
+    .bind()
+    .await?;
+
+// New (1.0.0) - current K2 code (correct)
+let endpoint = Endpoint::builder()
+    .secret_key(secret_key.clone())
+    .discovery(discovery)
+    .alpns(vec![/* ... */])
+    .bind()
+    .await?;
+```
+
+### 3. Blob Ticket Format
+
+Blob tickets and their generation may have changed:
+
+```rust
+// Current K2 code (in blobs.rs)
+let addr = self.endpoint.addr();
+let ticket = BlobTicket::new(addr, hash, BlobFormat::Raw);
+```
+
+Verify that `BlobTicket::new` accepts the same parameters in iroh-blobs 0.103.
+
+### 4. Discovery API Changes
+
+The discovery system was refactored:
+
+```rust
+// New pattern (current K2 code)
+use iroh_mainline_address_lookup::DhtDiscovery;
+use iroh_mdns_address_lookup::MdnsDiscovery;
+
+let discovery = ConcurrentDiscovery::from_services(vec![
+    DhtDiscovery::new(),
+    MdnsDiscovery::new(),
+]);
+```
+
+### 5. Feature Flags
+
+Iroh 1.0.0 introduced new feature flags and changed existing ones:
+
+| Feature | Description | Status in K2 |
+|---------|-------------|--------------|
+| `tls-ring` | Use Ring for TLS cryptography | Enabled |
+| `portmapper` | UPnP/NAT-PMP port mapping | Enabled |
+| `metrics` | Prometheus metrics export | Not used |
+| `test-utils` | Testing utilities | Not used |
+
+K2's `Cargo.toml`:
+
+```toml
+iroh = { version = "1.0.0", default-features = false, features = ["tls-ring", "portmapper"] }
+```
+
+<Note>
+`default-features = false` is used because K2 only needs specific features, reducing binary size and compile time.
+</Note>
+
+## Feature Flags Table
+
+### k2-core Features
+
+| Feature | Description | Default | Dependencies |
+|---------|-------------|---------|--------------|
+| `content-discovery` | Enable tracker-based peer discovery | Enabled | `iroh-content-discovery` |
+| `credential-store` | OS secure store for identity keys | Enabled | `amulet` (Windows) |
+
+### Iroh Features (in K2)
+
+| Feature | Crate | Purpose |
+|---------|-------|---------|
+| `tls-ring` | `iroh` | TLS 1.3 with Ring crypto |
+| `portmapper` | `iroh` | Automatic port forwarding |
+
+## Known Issues and Blockers
+
+### 1. Source Comment Drift
+
+**Issue:** Source code comments in `k2-core/src/lib.rs`, `blobs.rs`, and `docs.rs` still reference iroh 0.95/0.97.
+
+**Impact:** Low - comments don't affect functionality but may confuse developers.
+
+**Resolution:** Update comments to reflect actual dependency versions.
+
+```rust
+// lib.rs line 3, 276
+// OLD: "Built on iroh 0.95"
+// NEW: "Built on iroh 1.0.0"
+
+// blobs.rs
+// OLD: "iroh-blobs (v0.97)"
+// NEW: "iroh-blobs (v0.103)"
+
+// docs.rs
+// OLD: "iroh-docs (v0.95)"
+// NEW: "iroh-docs (v0.101)"
+```
+
+### 2. Missing Optional Dependency
+
+**Issue:** `iroh-content-discovery` is referenced by local path and may not exist:
+
+```toml
+iroh-content-discovery = { path = "../../iroh-test-space/iroh-content-discovery", optional = true }
+```
+
+**Impact:** High if feature `content-discovery` is enabled but path is invalid.
+
+**Resolution:**
+- Ensure the path exists in your build environment
+- Or publish/pin to a crates.io version
+- Or disable the feature: `cargo build --no-default-features`
+
+### 3. Amulet OS Secure Store Path
+
+**Issue:** `amulet` dependency uses a local path:
+
+```toml
+amulet = { path = "../../amulet", optional = true }
+```
+
+**Impact:** Build failure on fresh clones if path doesn't exist.
+
+**Resolution:**
+- Ensure `../../amulet` exists
+- Or disable credential store: `cargo build --no-default-features --features content-discovery`
+- Or implement a fallback key storage mechanism
+
+### 4. Version Compatibility Matrix
+
+Ensure all iroh-related crates are compatible:
+
+| Crate | Version | Compatible With |
+|-------|---------|-----------------|
+| `iroh` | 1.0.0 | iroh-base 1.0.0 |
+| `iroh-blobs` | 0.103 | iroh ^1.0.0 |
+| `iroh-gossip` | 0.101 | iroh ^1.0.0 |
+| `iroh-docs` | 0.101 | iroh ^1.0.0 |
+| `iroh-mainline-address-lookup` | 0.1 | iroh ^1.0.0 |
+| `iroh-mdns-address-lookup` | 0.1 | iroh ^1.0.0 |
+
+<Warning>
+Do not mix iroh 0.x sub-crates with iroh 1.0.0 core. The sub-crates (blobs, gossip, docs) have their own versioning but depend on `iroh ^1.0.0`.
+</Warning>
+
+## Migration Checklist
+
+- [ ] Update all source code comments referencing old iroh versions
+- [ ] Verify `iroh-content-discovery` local path exists or replace with crates.io version
+- [ ] Verify `amulet` local path exists or implement fallback identity storage
+- [ ] Run `cargo update` to refresh `Cargo.lock`
+- [ ] Run `cargo test --workspace` to verify all tests pass
+- [ ] Test P2P connectivity (DHT + mDNS discovery)
+- [ ] Test file sharing (blob tickets)
+- [ ] Test document sync (iroh-docs)
+- [ ] Test gossip messaging
+- [ ] Build release binaries for all targets
+- [ ] Update documentation references to iroh 1.0.0
+
+## Testing the Migration
+
+### Unit Tests
+
+```bash
+cd k2-core
+cargo test
+```
+
+### Integration Test Script
+
+```bash
+#!/bin/bash
+# test-migration.sh
+
+set -e
+
+echo "=== Cleaning build artifacts ==="
+cargo clean --workspace
+
+echo "=== Building k2-core ==="
+cd k2-core
+cargo build --release
+
+echo "=== Running tests ==="
+cargo test
+
+echo "=== Building k2-app-tauri ==="
+cd ../k2-app-tauri
+npm install
+npm run tauri build
+
+echo "=== Migration test complete ==="
+```
+
+### Manual Verification
+
+1. Start two nodes on the same network
+2. Verify mDNS discovery (should find each other quickly)
+3. Verify DHT discovery (may take longer)
+4. Test topic joining and broadcast
+5. Test file sharing with ticket generation/download
+6. Test contact sync across nodes
+
+## Resources
+
+- [Iroh 1.0.0 Release Notes](https://github.com/n0-computer/iroh/releases)
+- [Iroh Documentation](https://iroh.computer/docs)
+- [Iroh Crates.io](https://crates.io/crates/iroh)
+
+## Historical Context
+
+The migration from 0.95 to 1.0.0 represents a major stabilization of the Iroh API. Key improvements include:
+
+- **Stable API surface** - 1.0.0 guarantees backward compatibility
+- **Modular crates** - Sub-protocols are now independent crates
+- **Better discovery** - New address lookup crates for DHT and mDNS
+- **Improved performance** - Optimized gossip and blob transfer
+
+K2 is positioned to benefit from these improvements while maintaining its high-level P2P marketplace features.

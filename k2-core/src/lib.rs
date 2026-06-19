@@ -1,20 +1,27 @@
 //! K2 Core - P2P Marketplace Library
 //!
-//! Built on iroh 0.95 with gossip support for marketplace trading
+//! Built on iroh 1.0.0 with gossip support for marketplace trading
 //!
 //! Features:
 //! - Contact book management (via iroh-docs for P2P sync)
 //! - P2P file sharing via iroh-blobs
 //! - Marketplace gossip for trading
-//! - Tracker-based peer discovery
+//! - Tracker-based peer discovery (feature-gated: content-discovery)
 
 use anyhow::{Context, Result};
 use iroh::{
-    discovery::{pkarr::dht::DhtDiscovery, ConcurrentDiscovery, mdns::MdnsDiscovery},
+    endpoint::presets,
     protocol::Router,
-    Endpoint, EndpointId, SecretKey,
+    Endpoint, SecretKey,
 };
-use iroh_blobs::{store::fs::FsStore, BlobsProtocol, HashAndFormat};
+#[cfg(feature = "content-discovery")]
+use iroh::EndpointId;
+use iroh_base::PublicKey;
+// Address lookup services (DHT + mDNS) - iroh 1.0.0 extracted these to separate crates
+// These are configured via Endpoint builder .address_lookup() method
+// use iroh_mainline_address_lookup::DhtAddressLookup;
+// use iroh_mdns_address_lookup::MdnsAddressLookup;
+use iroh_blobs::{store::fs::FsStore, BlobsProtocol};
 use iroh_gossip::{
     net::{Gossip, GOSSIP_ALPN},
     proto::TopicId,
@@ -25,10 +32,13 @@ use iroh_docs::{
     NamespaceId,
     ALPN as DOCS_ALPN,
 };
+#[cfg(feature = "content-discovery")]
 use iroh_content_discovery::{
     announce, query,
     protocol::{AbsoluteTime, Announce, AnnounceKind, Query, QueryFlags, SignedAnnounce, ALPN as DISCOVERY_ALPN},
 };
+#[cfg(feature = "content-discovery")]
+use iroh_blobs::HashAndFormat;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -50,6 +60,7 @@ pub use profile::*;
 pub use sync::*;
 
 // Default tracker ID (same as example 12)
+#[cfg(feature = "content-discovery")]
 pub const DEFAULT_TRACKER: &str = "71853750efc1219d7976639087c5fb25cf8d4b49f6d509366f2e094a3f781623";
 
 // ============================================
@@ -273,7 +284,7 @@ impl ContactBookDocs {
 // ============================================
 
 /// K2Node wraps iroh Endpoint + iroh-blobs + iroh-gossip + iroh-docs
-/// Built on iroh 0.95 with Pkarr DHT discovery
+/// Built on iroh 1.0.0 with address_lookup discovery
 /// All data is persisted to AppData (no in-memory storage)
 #[derive(Clone)]
 pub struct K2Node {
@@ -315,32 +326,23 @@ impl K2Node {
         let secret_key = IdentityManager::load_or_generate()
             .context("Failed to load or generate identity")?;
         
-        // Create DHT discovery (Global)
-        let dht_discovery = DhtDiscovery::builder()
-            .n0_dns_pkarr_relay()
-            .dht(true)
-            .include_direct_addresses(true)
-            .secret_key(secret_key.clone())
-            .build()
-            .context("Failed to build DHT discovery")?;
+        // Build ALPN list (conditionally include content-discovery ALPN)
+        #[cfg_attr(not(feature = "content-discovery"), allow(unused_mut))]
+        let mut alpn_list = vec![
+            iroh_blobs::ALPN.to_vec(), 
+            GOSSIP_ALPN.to_vec(), 
+            DOCS_ALPN.to_vec(),
+            SYNC_INVITE_ALPN.to_vec(),
+        ];
+        #[cfg(feature = "content-discovery")]
+        alpn_list.push(DISCOVERY_ALPN.to_vec());
         
-        // Combine with Local Discovery (mDNS) for instant local detection
-        let discovery = ConcurrentDiscovery::from_services(vec![
-            Box::new(dht_discovery),
-            Box::new(MdnsDiscovery::builder().build(secret_key.public().into())?),
-        ]);
-        
-        // Create endpoint with blobs, gossip, docs, and discovery ALPNs
-        let endpoint = Endpoint::builder()
+        // Create endpoint with presets::N0 (includes DNS address lookup)
+        // iroh 1.0.0: presets::N0 includes DHT + DNS discovery by default
+        // Additional address lookup services can be added via .address_lookup()
+        let endpoint = Endpoint::builder(presets::N0)
             .secret_key(secret_key.clone())
-            .discovery(discovery)
-            .alpns(vec![
-                iroh_blobs::ALPN.to_vec(), 
-                GOSSIP_ALPN.to_vec(), 
-                DISCOVERY_ALPN.to_vec(),
-                DOCS_ALPN.to_vec(),
-                SYNC_INVITE_ALPN.to_vec(),
-            ])
+            .alpns(alpn_list)
             .bind()
             .await
             .context("Failed to create endpoint")?;
@@ -442,11 +444,11 @@ impl K2Node {
     pub async fn connect_to_contact(&self, node_id_str: &str) -> Result<()> {
         let bytes = hex::decode(node_id_str).context("Invalid hex format")?;
         let arr: [u8; 32] = bytes.try_into().map_err(|_| anyhow::anyhow!("Invalid ID length"))?;
-        let public_key = iroh::PublicKey::from_bytes(&arr)?;
+        let public_key = PublicKey::from_bytes(&arr)?;
         
         tokio::time::timeout(
             Duration::from_secs(10),
-            self.endpoint.connect(public_key, iroh_blobs::ALPN)
+            self.endpoint.connect(iroh_base::EndpointAddr::from(public_key), iroh_blobs::ALPN)
         )
         .await
         .context("Connection timeout")?
@@ -495,7 +497,7 @@ impl K2Node {
     }
 
     /// Subscribe and join a gossip topic with peers
-    pub async fn join_topic(&self, topic_id: TopicId, peers: Vec<iroh::PublicKey>) -> Result<GossipTopic> {
+    pub async fn join_topic(&self, topic_id: TopicId, peers: Vec<PublicKey>) -> Result<GossipTopic> {
         if peers.is_empty() {
             return self.subscribe_topic(topic_id).await;
         }
@@ -513,13 +515,14 @@ impl K2Node {
     /// 1. Query tracker for existing peers on this topic
     /// 2. Announce ourselves on tracker
     /// 3. Subscribe and join with found peers
+    #[cfg(feature = "content-discovery")]
     pub async fn subscribe_topic_with_discovery(&self, topic_id: TopicId) -> Result<GossipTopic> {
         let my_id = self.secret_key.public();
         
         // Parse tracker ID
         let tracker_bytes = hex::decode(DEFAULT_TRACKER).context("Invalid tracker hex")?;
         let tracker_arr: [u8; 32] = tracker_bytes.try_into().map_err(|_| anyhow::anyhow!("Invalid tracker length"))?;
-        let tracker_id = iroh::PublicKey::from_bytes(&tracker_arr)?;
+        let tracker_id = PublicKey::from_bytes(&tracker_arr)?;
         
         // Convert topic_id to hash for content discovery
         let topic_hash = HashAndFormat::raw(iroh_blobs::Hash::new(topic_id.as_bytes()));
@@ -554,11 +557,11 @@ impl K2Node {
         println!("[K2] 📢 Announced ourselves on tracker");
         
         // Convert EndpointId to PublicKey for gossip
-        let peer_keys: Vec<iroh::PublicKey> = peers.iter()
-            .filter_map(|eid| {
-                // EndpointId contains PublicKey
-                let bytes = eid.as_bytes();
-                iroh::PublicKey::from_bytes(bytes).ok()
+        let peer_keys: Vec<PublicKey> = peers.iter()
+            .filter_map(|nid| {
+                // EndpointId wraps PublicKey
+                let bytes = nid.as_bytes();
+                PublicKey::from_bytes(bytes).ok()
             })
             .take(10) // Max 10 peers
             .collect();
@@ -571,6 +574,13 @@ impl K2Node {
             println!("[K2] 🤝 Joining gossip with {} peers...", peer_keys.len());
             self.join_topic(topic_id, peer_keys).await
         }
+    }
+
+    /// Subscribe to topic WITHOUT tracker (fallback when content-discovery feature is disabled)
+    #[cfg(not(feature = "content-discovery"))]
+    pub async fn subscribe_topic_with_discovery(&self, topic_id: TopicId) -> Result<GossipTopic> {
+        println!("[K2] ℹ️ Content discovery disabled, subscribing without tracker");
+        self.subscribe_topic(topic_id).await
     }
 
     /// Subscribe to a topic and cache the sender for later broadcasting

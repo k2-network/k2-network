@@ -7,7 +7,7 @@ use aes_gcm::{
     Aes256Gcm, Key, Nonce,
 };
 
-#[cfg(target_os = "windows")]
+#[cfg(all(target_os = "windows", feature = "credential-store"))]
 use amulet::{AmuletStore, WindowsStore};
 
 /// IdentityManager handles loading and saving the node's SecretKey.
@@ -47,14 +47,17 @@ impl IdentityManager {
         let dir = Self::get_roaming_dir();
         let is_isolated = std::env::var("K2_DATA_DIR").is_ok();
 
-        if !is_isolated {
-            // 1. Try to load from Amulet (OS Secure Store)
-            if let Ok(Some(key)) = Self::load_from_amulet() {
-                println!("[Identity] 🔐 Loaded primary identity from OS Secure Store");
-                return Ok(key);
+        #[cfg(feature = "credential-store")]
+        {
+            if !is_isolated {
+                // 1. Try to load from Amulet (OS Secure Store)
+                if let Ok(Some(key)) = Self::load_from_amulet() {
+                    println!("[Identity] 🔐 Loaded primary identity from OS Secure Store");
+                    return Ok(key);
+                }
+            } else {
+                println!("[Identity] 🛡️ Isolated mode: Skipping OS Secure Store");
             }
-        } else {
-            println!("[Identity] 🛡️ Isolated mode: Skipping OS Secure Store");
         }
 
         // 2. Try to load from Local Backup File (Encrypted)
@@ -65,9 +68,10 @@ impl IdentityManager {
 
         // 3. Generate new if both failed
         println!("[Identity] ✨ Generating new identity for this environment");
-        let new_key = SecretKey::generate(&mut rand::rng());
+        let new_key = SecretKey::generate();
         
         // Save to locations
+        #[cfg(feature = "credential-store")]
         if !is_isolated {
             let _ = Self::save_to_amulet(&new_key);
         }
@@ -78,6 +82,7 @@ impl IdentityManager {
     }
 
     /// Load from OS Store via Amulet
+    #[cfg(feature = "credential-store")]
     fn load_from_amulet() -> Result<Option<SecretKey>> {
         #[cfg(target_os = "windows")]
         {
@@ -105,6 +110,7 @@ impl IdentityManager {
     }
 
     /// Save to OS Store via Amulet
+    #[cfg(feature = "credential-store")]
     fn save_to_amulet(key: &SecretKey) -> Result<()> {
         #[cfg(target_os = "windows")]
         {

@@ -26,10 +26,10 @@ serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # K2 P2P Core
-k2-core = { path = "../../k2-core" }
+k2-core = { path = "../../k2-core", features = ["content-discovery"] }
 tokio = { version = "1", features = ["full"] }
 anyhow = "1"
-iroh-gossip = "0.95.0"
+iroh-gossip = "0.101"
 futures-util = "0.3"
 
 # HTTP client for API calls (no CORS in backend)

@@ -4,11 +4,19 @@ version = "0.2.0"
 edition = "2021"
 
 [dependencies]
-iroh = { version = "0.95.0", features = ["discovery-pkarr-dht", "discovery-local-network"] }
-iroh-base = "0.95"
-iroh-blobs = "0.97"
-iroh-gossip = "0.95.0"
-iroh-docs = "0.95.0"
+# Core Iroh 1.0.0
+iroh = { version = "1.0.0", default-features = false, features = ["tls-ring", "portmapper"] }
+iroh-base = "1.0.0"
+
+# Iroh sub-crates (follow their own versioning, depend on iroh ^1.0.0)
+iroh-blobs = "0.103"
+iroh-gossip = "0.101"
+iroh-docs = "0.101"
+
+# Address lookup services (extracted from iroh core in 1.0.0)
+iroh-mainline-address-lookup = "0.4"
+iroh-mdns-address-lookup = "0.4"
+
 tokio = { version = "1", features = ["full"] }
 tokio-util = { version = "0.7", features = ["compat"] }
 anyhow = "1"
@@ -20,13 +28,25 @@ bytes = "1"
 rand = "0.9"
 blake3 = "1"
 hex = "0.4"
-iroh-content-discovery = { path = "../../iroh-test-space/iroh-content-discovery" }
-amulet = { path = "../../amulet" }
+
+iroh-content-discovery = { path = "../../iroh-test-space/iroh-content-discovery/iroh-content-discovery", optional = true }
+
+# Optional: OS secure store via amulet (Windows only, feature-gated)
+amulet = { path = "../../amulet", optional = true }
+
 directories = "5"
 aes-gcm = "0.10"
 base64 = "0.22"
 notify = "6.1"
 filetime = "0.2.27"
+
+[features]
+default = ["credential-store"]
+content-discovery = ["iroh-content-discovery"]
+credential-store = ["amulet"]
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(feature, values("content-discovery"))'] }
 
 
 
