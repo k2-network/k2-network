@@ -1,5 +1,5 @@
 <p align="center">
-  <img width="200" src="k2-logo.png" alt="K2 Network Logo" />
+  <img width="200" src="https://github.com/user-attachments/assets/9a03018a-7ce5-40fc-893f-821e7cee64e5" alt="K2 Network Logo" />
 </p>
 
 
