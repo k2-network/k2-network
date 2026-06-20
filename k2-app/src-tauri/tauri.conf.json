@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "k2-app-tauri",
+  "productName": "k2-app",
   "version": "0.1.0",
   "identifier": "com.k2.network",
   "build": {
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "k2-app-tauri",
+        "title": "k2-app",
         "width": 800,
         "height": 600,
         "maximized": true

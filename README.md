@@ -29,7 +29,7 @@
 
 ```bash
 git clone https://github.com/yourusername/k2.git
-cd k2-app-tauri
+cd k2-app
 npm install
 npm run tauri dev
 ```
@@ -45,7 +45,7 @@ npm run tauri android dev
 | Component | Description |
 |-----------|-------------|
 | [k2-core](k2-core/) | Rust P2P library (Iroh, gossip, blobs, docs) |
-| [k2-app-tauri](k2-app-tauri/) | Tauri 2 + React 19 desktop and mobile frontend |
+| [k2-app](k2-app/) | Tauri 2 + React 19 desktop and mobile frontend |
 
 See [k2-docs/](k2-docs/) for detailed documentation.
 
@@ -60,7 +60,7 @@ See [k2-docs/](k2-docs/) for detailed documentation.
 
 ## Configuration
 
-Create `.env` in `k2-app-tauri/`:
+Create `.env` in `k2-app/`:
 
 ```env
 VITE_GROQ_API_KEY=your_groq_api_key
