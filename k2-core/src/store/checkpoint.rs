@@ -70,7 +70,7 @@ impl LoopCheckpoint {
 }
 
 /// Trait for checkpoint storage operations.
-pub trait CheckpointStore {
+pub trait CheckpointStore: Send + Sync {
     fn save_checkpoint(&self, checkpoint: &LoopCheckpoint) -> Result<CheckpointId, StoreError>;
     fn load_checkpoint(&self, id: &CheckpointId) -> Result<Option<LoopCheckpoint>, StoreError>;
     fn list_checkpoints(&self, session_id: &str) -> Result<Vec<LoopCheckpoint>, StoreError>;

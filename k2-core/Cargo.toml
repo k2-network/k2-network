@@ -47,6 +47,9 @@ extism = "1.10"
 uuid = { version = "1", features = ["v4", "serde"] }
 chrono = { version = "0.4", features = ["serde"] }
 
+[dev-dependencies]
+tempfile = "3"
+
 [features]
 default = ["credential-store"]
 content-discovery = ["iroh-content-discovery"]

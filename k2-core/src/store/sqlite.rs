@@ -144,6 +144,29 @@ impl ApprovalRecordStore for SqliteStore {
         }
     }
 
+    fn load_approval_by_request_id(&self, request_id: &str) -> Result<Option<ApprovalRecord>, StoreError> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare(
+            "SELECT id, request_id, tool_id, session_id, status, requested_at, resolved_at FROM approvals WHERE request_id = ?1",
+        )?;
+        let mut rows = stmt.query(params![request_id])?;
+        if let Some(row) = rows.next()? {
+            let status_str: String = row.get(4)?;
+            let status: ApprovalStatus = status_str.parse().unwrap_or(ApprovalStatus::Pending);
+            Ok(Some(ApprovalRecord {
+                id: row.get(0)?,
+                request_id: row.get(1)?,
+                tool_id: row.get(2)?,
+                session_id: row.get(3)?,
+                status,
+                requested_at: row.get::<_, i64>(5)? as u64,
+                resolved_at: row.get::<_, Option<i64>>(6)?.map(|t| t as u64),
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn list_pending_approvals(&self) -> Result<Vec<ApprovalRecord>, StoreError> {
         let conn = self.conn.lock().unwrap();
         let mut stmt = conn.prepare(

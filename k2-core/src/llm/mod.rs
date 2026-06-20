@@ -10,6 +10,7 @@
 //! | [`groq`]        | Groq (LPU)     | Requires `GROQ_API_KEY` env var  |
 //! | [`openai_compat`] | OpenAI-compat | Works with any `/chat/completions` API |
 //! | [`ollama`]      | Ollama (local) | No API key; must have Ollama running |
+//! | [`fallback`]    | Fallback wrapper | Auto-falls back to Ollama on network errors |
 //!
 //! ## Quick start
 //!
@@ -58,8 +59,10 @@ pub mod groq;
 pub mod openai_compat;
 pub mod ollama;
 pub mod registry;
+pub mod fallback;
 
 pub use error::LlmError;
+pub use fallback::FallbackProvider;
 pub use groq::{GroqProvider, K2_MARKETPLACE_SYSTEM_PROMPT};
 pub use ollama::OllamaProvider;
 pub use openai_compat::OpenAiCompatProvider;

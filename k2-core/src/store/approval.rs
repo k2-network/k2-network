@@ -100,6 +100,7 @@ impl ApprovalRecord {
 pub trait ApprovalRecordStore {
     fn save_approval(&self, record: &ApprovalRecord) -> Result<String, StoreError>;
     fn load_approval(&self, id: &str) -> Result<Option<ApprovalRecord>, StoreError>;
+    fn load_approval_by_request_id(&self, request_id: &str) -> Result<Option<ApprovalRecord>, StoreError>;
     fn list_pending_approvals(&self) -> Result<Vec<ApprovalRecord>, StoreError>;
     fn update_approval_status(&self, id: &str, status: ApprovalStatus) -> Result<bool, StoreError>;
 }
