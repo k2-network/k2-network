@@ -59,6 +59,16 @@ pub use blobs::*;
 pub use profile::*;
 pub use sync::*;
 
+pub mod llm;
+pub mod capabilities;
+pub mod wasm;
+pub mod security;
+pub mod store;
+pub mod agent_loop;
+pub mod approval;
+pub mod tools;
+pub mod p2p_security;
+
 // Default tracker ID (same as example 12)
 #[cfg(feature = "content-discovery")]
 pub const DEFAULT_TRACKER: &str = "71853750efc1219d7976639087c5fb25cf8d4b49f6d509366f2e094a3f781623";
